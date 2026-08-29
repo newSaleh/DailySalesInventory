@@ -356,10 +356,10 @@ function parseData(raw){
   if(rows.length < 2) throw new Error("لم يتم العثور على بيانات كافية. الصق سطر العناوين ثم صفوف بيانات الموردين.");
 
   const header = rows[0].map(h=>h.toUpperCase());
-  let codeIdx = header.findIndex(h=>h.includes('CODE'));
-  let nameIdx = header.findIndex(h=>h.includes('NAME'));
-  let invIdx = header.findIndex(h=>h.includes('INVENTORY'));
-  let salesIdx = header.findIndex(h=>h.includes('SALES'));
+  let codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز'));
+  let nameIdx = header.findIndex(h=>h.includes('NAME') || h.includes('اسم'));
+  let invIdx = header.findIndex(h=>h.includes('INVENTORY') || h.includes('مخزون'));
+  let salesIdx = header.findIndex(h=>h.includes('SALES') || h.includes('مبيعات'));
 
   if(codeIdx===-1 || nameIdx===-1 || invIdx===-1 || salesIdx===-1){
     if(rows[0].length >= 4){
@@ -390,8 +390,8 @@ function parseAliasMap(raw){
   if(rows.length < 2) return map;
 
   const header = rows[0].map(h=>h.toUpperCase());
-  let codeIdx = header.findIndex(h=>h.includes('CODE'));
-  let aliasIdx = header.findIndex(h=>h.includes('ALIAS'));
+  let codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز'));
+  let aliasIdx = header.findIndex(h=>h.includes('ALIAS') || h.includes('بديل'));
   if(codeIdx===-1 || aliasIdx===-1){
     if(rows[0].length < 2) return map;
     codeIdx = 0;
