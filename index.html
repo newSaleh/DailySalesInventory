@@ -246,6 +246,7 @@
       <div class="actions" style="margin-top:0;margin-bottom:12px;">
         <button type="button" class="secondary" id="importAliasExcelBtn">📄 استيراد من ملف Excel</button>
         <input type="file" id="aliasExcelFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+        <button type="button" id="saveAliasBtn">💾 حفظ / تحديث الأسماء</button>
         <button type="button" class="danger" id="clearAliasBtn">🗑️ مسح الأسماء المحفوظة</button>
       </div>
       <textarea id="aliasData" placeholder="SupplierCode&#9;alias&#10;0201&#9;باوارث"></textarea>
@@ -476,7 +477,12 @@ document.getElementById('aliasToggleBtn').addEventListener('click', ()=>{
 const ALIAS_STORAGE_KEY = 'supplierAliasMapping';
 
 function saveAliasStorage(){
-  try{ localStorage.setItem(ALIAS_STORAGE_KEY, document.getElementById('aliasData').value); }catch(e){}
+  try{
+    localStorage.setItem(ALIAS_STORAGE_KEY, document.getElementById('aliasData').value);
+    return true;
+  }catch(e){
+    return false;
+  }
 }
 
 function loadAliasStorage(){
@@ -490,6 +496,19 @@ if(savedAlias){
   document.getElementById('aliasPanel').style.display = 'block';
 }
 aliasDataEl.addEventListener('input', saveAliasStorage);
+
+document.getElementById('saveAliasBtn').addEventListener('click', ()=>{
+  const aliasMsg = document.getElementById('aliasMsg');
+  const ok = saveAliasStorage();
+  if(ok){
+    const count = Object.keys(parseAliasMap(aliasDataEl.value)).length;
+    aliasMsg.style.color = 'var(--muted)';
+    aliasMsg.textContent = `تم حفظ ${count} اسمًا بديلاً في متصفحك بنجاح.`;
+  }else{
+    aliasMsg.style.color = 'var(--danger)';
+    aliasMsg.textContent = 'تعذّر الحفظ في متصفحك (قد يكون التصفح الخاص أو تخزين المتصفح معطّلاً). ستظل الأسماء تعمل في هذه الجلسة فقط.';
+  }
+});
 
 document.getElementById('clearAliasBtn').addEventListener('click', ()=>{
   aliasDataEl.value = '';
