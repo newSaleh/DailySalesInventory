@@ -537,13 +537,12 @@ reportDateInput.value = localISODate(-1);
   });
 });
 
-function buildCopyText(branch, dateAr, rows, totalSales){
+function buildCopyText(branch, dateAr, rows){
   const lines = [];
-  lines.push(branch ? `مبيعات ${branch} ليوم ${dateAr}` : `مبيعات ليوم ${dateAr}`);
-  lines.push('');
-  lines.push(`عدد الموردين: ${rows.length}`);
-  lines.push(`إجمالي مبيعات اليوم: ${numFmt(totalSales)}`);
-  lines.push('');
+  const titleLine = branch ? `مبيعات ${branch} ليوم ${dateAr}` : `مبيعات ليوم ${dateAr}`;
+  lines.push(`*${titleLine}*`);
+  lines.push(`*عدد الموردين: ${rows.length}*`);
+  lines.push('_______________');
   rows.forEach((r, i)=>{
     lines.push(`${i+1}. ${r.displayName} (${r.code}) — ${numFmt(r.sales)}`);
   });
@@ -592,7 +591,7 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
 
     currentFileName = branch ? `مبيعات فرع ${branch} ليوم ${dateAr}` : `مبيعات ليوم ${dateAr}`;
 
-    document.getElementById('copyText').value = buildCopyText(branch, dateAr, rows, totalSales);
+    document.getElementById('copyText').value = buildCopyText(branch, dateAr, rows);
 
     document.getElementById('report').style.display = 'block';
     document.getElementById('printBtn').style.display = 'inline-block';
