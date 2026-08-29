@@ -344,6 +344,12 @@ function parseNumber(s){
   return parseFloat(String(s).replace(/,/g,'').trim());
 }
 
+// يوحّد رموز الموردين بتجاهل الأصفار البادئة (مثلاً "0201" و"201" يُعاملان كنفس الرمز)
+// حتى يعمل الربط مع الاسم البديل حتى لو اختلف تنسيق الرمز بين ملف المبيعات وملف الأسماء
+function normalizeCode(code){
+  return String(code ?? '').trim().replace(/^0+(?=\d)/, '');
+}
+
 function splitRows(raw){
   const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
   let rows = lines.map(l => l.split('\t').map(c=>c.trim()));
@@ -403,7 +409,7 @@ function parseAliasMap(raw){
   rows.slice(1).forEach(r=>{
     const code = r[codeIdx];
     const alias = r[aliasIdx];
-    if(code && alias) map[code] = alias;
+    if(code && alias) map[normalizeCode(code)] = alias;
   });
   return map;
 }
@@ -536,9 +542,7 @@ function buildCopyText(branch, dateAr, rows, totalSales){
   lines.push(`إجمالي مبيعات اليوم: ${numFmt(totalSales)}`);
   lines.push('');
   rows.forEach((r, i)=>{
-    lines.push(`${i+1}. ${r.displayName} (${r.code})`);
-    lines.push(`   المبيعات: ${numFmt(r.sales)}`);
-    lines.push(`   المخزون: ${numFmt(r.inventory)}`);
+    lines.push(`${i+1}. ${r.displayName} (${r.code}) — مبيعات ${numFmt(r.sales)} | مخزون ${numFmt(r.inventory)}`);
   });
   return lines.join('\n');
 }
@@ -557,7 +561,7 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
     const raw = document.getElementById('rawData').value;
     const aliasMap = parseAliasMap(document.getElementById('aliasData').value);
     const rows = parseData(raw)
-      .map(r => ({...r, displayName: aliasMap[r.code] || r.name}))
+      .map(r => ({...r, displayName: aliasMap[normalizeCode(r.code)] || r.name}))
       .sort((a,b)=> b.sales - a.sales);
 
     const totalSales = rows.reduce((a,r)=>a+r.sales,0);
