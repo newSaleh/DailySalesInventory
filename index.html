@@ -539,10 +539,14 @@ reportDateInput.value = localISODate(-1);
 
 function buildCopyText(branch, dateAr, rows){
   const lines = [];
-  const titleLine = branch ? `مبيعات ${branch} ليوم ${dateAr}` : `مبيعات ليوم ${dateAr}`;
-  lines.push(`*${titleLine}*`);
-  lines.push(`*عدد الموردين: ${rows.length}*`);
-  lines.push('_______________');
+  if(branch){
+    lines.push(`*مبيعات ${branch}*`);
+    lines.push(`*يوم ${dateAr}*`);
+  }else{
+    lines.push(`*مبيعات يوم ${dateAr}*`);
+  }
+  lines.push(`*عدد الموردين ${rows.length}*`);
+  lines.push('_________________________');
   rows.forEach((r, i)=>{
     lines.push(`${i+1}. ${r.displayName} (${r.code}) — ${numFmt(r.sales)}`);
   });
