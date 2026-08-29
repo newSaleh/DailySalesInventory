@@ -196,13 +196,22 @@
   }
 
   @media print{
-    body{background:#fff;padding:0;}
+    body{background:#fff;padding:0;color:#000;}
     .no-print{display:none !important;}
     #report{display:block !important;}
-    .report-page{border:none;border-radius:0;padding:0;filter:grayscale(100%);}
+    .report-page{border:none;border-radius:0;padding:0;}
     @page{size:A4;margin:10mm;}
 
+    /* الشعار فقط يبقى ملونًا؛ كل ما عداه أبيض وأسود صرف لتوفير الحبر */
     .report-logo{max-width:140px;margin-bottom:8px;}
+    .report-title{border-bottom-color:#000;}
+    .report-title h1, .report-title .sub{color:#000;}
+    table.rt caption{color:#000;}
+    table.rt th, table.rt td{border-color:#000;color:#000;}
+    table.rt thead th{background:#fff;color:#000;border-width:1.5px;}
+    table.rt tbody tr:nth-child(even){background:#f0f0f0;}
+    table.rt tr.best td{color:#000;}
+    .report-footer{color:#000;border-top-color:#000;}
 
     #table1{display:none;}
 
@@ -571,11 +580,15 @@ document.getElementById('printBtn').addEventListener('click', ()=>{
 });
 
 function grayscaleCanvas(canvas){
+  // تحويل إلى تدرج رمادي، مع "تسوية" الدرجات القريبة من الأبيض/الأسود الصرف
+  // (وترك حواف النص الرفيعة كما هي) — يقلّل حجم ملف PNG كثيرًا دون التأثير على الوضوح
   const ctx = canvas.getContext('2d');
   const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const d = imgData.data;
   for(let i=0;i<d.length;i+=4){
-    const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    let gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    if(gray > 240) gray = 255;
+    else if(gray < 60) gray = 0;
     d[i] = d[i+1] = d[i+2] = gray;
   }
   ctx.putImageData(imgData, 0, 0);
@@ -588,7 +601,10 @@ document.getElementById('pngBtn').addEventListener('click', async ()=>{
   genMsg.style.color = 'var(--muted)';
   genMsg.textContent = 'جارٍ إنشاء صورة PNG...';
   pngBtn.disabled = true;
+  const logo = document.querySelector('.report-logo');
+  const prevLogoDisplay = logo.style.display;
   try{
+    logo.style.display = 'none'; // حذف الشعار من الصورة يقلّل حجم الملف بشكل ملحوظ
     const target = document.querySelector('.report-page');
     const scale = Math.min(2, window.devicePixelRatio || 1.5);
     const canvas = grayscaleCanvas(await html2canvas(target, {scale, backgroundColor:'#ffffff'}));
@@ -611,6 +627,7 @@ document.getElementById('pngBtn').addEventListener('click', async ()=>{
     genMsg.style.color = 'var(--danger)';
     genMsg.textContent = 'خطأ أثناء إنشاء الصورة: ' + err.message;
   }finally{
+    logo.style.display = prevLogoDisplay;
     pngBtn.disabled = false;
   }
 });
