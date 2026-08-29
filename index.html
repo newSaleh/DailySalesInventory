@@ -202,11 +202,12 @@
     .report-page{border:none;border-radius:0;padding:0;}
     @page{size:A4;margin:10mm;}
 
-    /* الشعار فقط يبقى ملونًا؛ كل ما عداه أبيض وأسود صرف لتوفير الحبر */
-    .report-logo{max-width:140px;margin-bottom:8px;}
-    .report-title{border-bottom-color:#000;}
+    /* الشعار محذوف من ملف PDF لتقليل حجمه (هو المصدر الرئيسي لثقل الملف بعد خطوط الطباعة)؛
+       الباقي أبيض وأسود صرف لتوفير الحبر */
+    .report-logo{display:none;}
+    .report-title{border-bottom-color:#000;padding-top:4px;}
     .report-title h1, .report-title .sub{color:#000;}
-    table.rt caption{color:#000;}
+    table.rt caption{display:none;}
     table.rt th, table.rt td{border-color:#000;color:#000;}
     table.rt thead th{background:#fff;color:#000;border-width:1.5px;}
     table.rt tbody tr:nth-child(even){background:#f0f0f0;}
@@ -523,6 +524,8 @@ function buildCopyText(branch, dateAr, rows, totalSales){
   return lines.join('\n');
 }
 
+let currentFileName = 'تقرير-مبيعات';
+
 document.getElementById('generateBtn').addEventListener('click', ()=>{
   const genMsg = document.getElementById('genMsg');
   genMsg.textContent = '';
@@ -561,6 +564,8 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
     document.getElementById('reportTitleAr').textContent = branch ? `مبيعات ${branch} ليوم ${dateAr}` : `مبيعات ليوم ${dateAr}`;
     document.getElementById('genDate').textContent = 'تاريخ التوليد: ' + new Date().toLocaleDateString('ar-SA');
 
+    currentFileName = branch ? `مبيعات فرع ${branch} ليوم ${dateAr}` : `مبيعات ليوم ${dateAr}`;
+
     document.getElementById('copyText').value = buildCopyText(branch, dateAr, rows, totalSales);
 
     document.getElementById('report').style.display = 'block';
@@ -576,7 +581,13 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('printBtn').addEventListener('click', ()=>{
-  window.print();
+  const prevTitle = document.title;
+  document.title = currentFileName; // يُستخدم كاسم مقترح لملف PDF في نافذة الطباعة
+  try{
+    window.print();
+  }finally{
+    document.title = prevTitle;
+  }
 });
 
 function grayscaleCanvas(canvas){
@@ -611,11 +622,10 @@ document.getElementById('pngBtn').addEventListener('click', async ()=>{
     const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
     if(!blob) throw new Error('تعذّر إنشاء الصورة.');
 
-    const titleText = document.getElementById('reportTitleAr').textContent.trim().replace(/\s+/g,'-');
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${titleText}.png`;
+    a.download = `${currentFileName.replace(/\s+/g,'-')}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
