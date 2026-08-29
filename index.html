@@ -216,8 +216,11 @@
 
     #table1{display:none;}
 
+    /* استخدام نفس خط الصفحة (Tajawal) بدل خطوط النظام (Tahoma/Arial) عند الطباعة:
+       الخط الذي يُحمَّل فعليًا من Google Fonts صغير جدًا (~9 كيلوبايت لكل وزن، مقسّم عربي/لاتيني)
+       ومضمون الحجم على كل الأجهزة، بخلاف الاعتماد على أي خط نظام قد يستبدله المتصفح بخط أثقل بكثير */
     body, .report-title h1, table.rt, table.rt caption, table.rt td.num, table.rt th.num{
-      font-family:'Tahoma', Arial, sans-serif !important;
+      font-family:'Tajawal', sans-serif !important;
     }
   }
 </style>
@@ -542,7 +545,7 @@ function buildCopyText(branch, dateAr, rows, totalSales){
   lines.push(`إجمالي مبيعات اليوم: ${numFmt(totalSales)}`);
   lines.push('');
   rows.forEach((r, i)=>{
-    lines.push(`${i+1}. ${r.displayName} (${r.code}) — مبيعات ${numFmt(r.sales)} | مخزون ${numFmt(r.inventory)}`);
+    lines.push(`${i+1}. ${r.displayName} (${r.code}) — ${numFmt(r.sales)}`);
   });
   return lines.join('\n');
 }
@@ -603,10 +606,11 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
   }
 });
 
-document.getElementById('printBtn').addEventListener('click', ()=>{
+document.getElementById('printBtn').addEventListener('click', async ()=>{
   const prevTitle = document.title;
   document.title = currentFileName; // يُستخدم كاسم مقترح لملف PDF في نافذة الطباعة
   try{
+    if(document.fonts && document.fonts.ready) await document.fonts.ready; // يضمن اكتمال تحميل خط الطباعة قبل فتح نافذة الحفظ
     window.print();
   }finally{
     document.title = prevTitle;
