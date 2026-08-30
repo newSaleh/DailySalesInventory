@@ -18,6 +18,34 @@
     --danger:#9c3b3b;
     --muted:#5b6472;
     --card:#ffffff;
+    --field-bg:#f7f9fc;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#e7ecf5;
+      --paper:#10141d;
+      --line:#2d3648;
+      --accent:#5b8fdc;
+      --accent-dark:#7fa8e8;
+      --danger:#e28080;
+      --muted:#98a3b8;
+      --card:#1a2030;
+      --field-bg:#141a26;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#e7ecf5;
+    --paper:#10141d;
+    --line:#2d3648;
+    --accent:#5b8fdc;
+    --accent-dark:#7fa8e8;
+    --danger:#e28080;
+    --muted:#98a3b8;
+    --card:#1a2030;
+    --field-bg:#141a26;
+    color-scheme:dark;
   }
   *{box-sizing:border-box;}
   body{
@@ -38,6 +66,21 @@
   }
   .app-header h1{font-size:22px;margin:0;font-weight:900;}
   .app-header span{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .header-right{display:flex;align-items:center;gap:12px;}
+  .theme-toggle{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:8px;
+    width:32px;
+    height:32px;
+    padding:0;
+    font-size:15px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
 
   .panel{
     background:var(--card);
@@ -64,7 +107,7 @@
     border:1px solid var(--line);
     border-radius:6px;
     resize:vertical;
-    background:#f7f9fc;
+    background:var(--field-bg);
   }
   .row{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;}
   .row > div{flex:1;min-width:180px;}
@@ -75,7 +118,7 @@
     border-radius:6px;
     font-family:'Tajawal',sans-serif;
     font-size:13.5px;
-    background:#f7f9fc;
+    background:var(--field-bg);
   }
   .actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
   button{
@@ -89,8 +132,8 @@
     background:var(--accent);
     color:#fff;
   }
-  button.secondary{background:#fff;color:var(--accent-dark);}
-  button.danger{background:#fff;color:var(--danger);border-color:var(--danger);}
+  button.secondary{background:var(--card);color:var(--accent-dark);}
+  button.danger{background:var(--card);color:var(--danger);border-color:var(--danger);}
   button:hover{opacity:.9;}
   .msg{font-size:12.5px;color:var(--muted);margin-top:10px;min-height:16px;}
 
@@ -122,14 +165,14 @@
     border-radius:6px;
     font-family:'Tajawal',sans-serif;
     font-size:13.5px;
-    background:#f7f9fc;
+    background:var(--field-bg);
   }
   .alias-row input.code, .alias-row-header span:first-child{flex:0 0 90px;}
   .alias-row button.alias-row-delete{
     flex:0 0 40px;
     padding:8px 0;
     text-align:center;
-    background:#fff;
+    background:var(--card);
     color:var(--danger);
     border-color:var(--danger);
   }
@@ -154,14 +197,26 @@
     border:1px solid var(--line);
     border-radius:6px;
     resize:vertical;
-    background:#f7f9fc;
+    background:var(--field-bg);
     white-space:pre;
   }
 
-  /* ---- Report ---- */
+  /* ---- Report ----
+     التقرير المولّد بطاقة "ورقية" ثابتة المظهر دائمًا (بغض النظر عن الوضع الداكن/الفاتح للواجهة)
+     تمامًا كصفحة مطبوعة، لذا يعيد ضبط متغيرات الألوان إلى قيمها الفاتحة الأصلية */
   #report{display:none;}
   .report-page{
+    --ink:#182333;
+    --paper:#eef2f7;
+    --line:#c4cedb;
+    --accent:#2f5fa8;
+    --accent-dark:#1d3f75;
+    --danger:#9c3b3b;
+    --muted:#5b6472;
+    --card:#ffffff;
+    color-scheme:light;
     background:#fff;
+    color:var(--ink);
     border:1px solid var(--line);
     border-radius:10px;
     padding:34px 38px;
@@ -261,7 +316,10 @@
 
   <div class="app-header no-print">
     <h1>تقرير مبيعات ومخزون الموردين اليومي</h1>
-    <span>Daily Supplier Sales Report Builder</span>
+    <div class="header-right">
+      <span>Daily Supplier Sales Report Builder</span>
+      <button type="button" id="themeToggleBtn" class="theme-toggle" title="تبديل الوضع الداكن">🌙</button>
+    </div>
   </div>
 
   <div class="panel no-print">
@@ -380,6 +438,39 @@
 </div>
 
 <script>
+// الوضع الداكن: يتبع تفضيل النظام تلقائيًا ما لم يختر المستخدم وضعًا صراحةً (يُحفظ في المتصفح)
+const THEME_KEY = 'uiTheme';
+
+function isDarkActive(){
+  const explicit = document.documentElement.getAttribute('data-theme');
+  if(explicit) return explicit === 'dark';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function applyTheme(theme){
+  if(theme === 'light' || theme === 'dark'){
+    document.documentElement.setAttribute('data-theme', theme);
+  }else{
+    document.documentElement.removeAttribute('data-theme');
+  }
+  const btn = document.getElementById('themeToggleBtn');
+  if(btn){
+    const dark = isDarkActive();
+    btn.textContent = dark ? '☀️' : '🌙';
+    btn.title = dark ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن';
+  }
+}
+
+let savedTheme = null;
+try{ savedTheme = localStorage.getItem(THEME_KEY); }catch(e){}
+applyTheme(savedTheme);
+
+document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
+  const next = isDarkActive() ? 'light' : 'dark';
+  try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  applyTheme(next);
+});
+
 const ARABIC_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 
 function pad2(n){return String(n).padStart(2,'0');}
