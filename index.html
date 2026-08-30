@@ -112,6 +112,37 @@
   }
   #aliasData{min-height:100px;}
 
+  .alias-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+  .alias-row{display:flex;gap:8px;align-items:center;}
+  .alias-row input{
+    flex:1;
+    min-width:0;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-family:'Tajawal',sans-serif;
+    font-size:13.5px;
+    background:#f7f9fc;
+  }
+  .alias-row input.code, .alias-row-header span:first-child{flex:0 0 90px;}
+  .alias-row button.alias-row-delete{
+    flex:0 0 40px;
+    padding:8px 0;
+    text-align:center;
+    background:#fff;
+    color:var(--danger);
+    border-color:var(--danger);
+  }
+  .alias-row-header{
+    font-size:11.5px;
+    color:var(--muted);
+    font-weight:700;
+    margin-bottom:2px;
+  }
+  .alias-row-header span:nth-child(2){flex:1;}
+  .alias-row-header span:last-child{flex:0 0 40px;}
+  #addAliasRowBtn{margin-bottom:14px;}
+
   #copyText{
     width:100%;
     min-height:220px;
@@ -245,14 +276,31 @@
 
     <button type="button" class="alias-toggle" id="aliasToggleBtn">🏷️ استخدام أسماء بديلة (مختصرة) للموردين — اختياري</button>
     <div id="aliasPanel" style="display:none;">
-      <label>الصق جدول يحتوي على عمود رمز المورد (Code) وعمود الاسم البديل (alias)، أو استورد ملف Excel بنفس الفكرة. عند التوليد سيتم استبدال اسم المورد تلقائيًا بالاسم البديل إن وُجد لرمزه — مفيد لاختصار الأسماء الطويلة. يتم حفظ هذا الجدول تلقائيًا في متصفحك فيبقى معبّأً في المرات القادمة.</label>
+      <label>أضف رمز المورد واسمه البديل صفًا بصف أدناه (سهل الاستخدام من الجوال أيضًا)، أو استورد ملف Excel لإضافة عدد كبير دفعة واحدة. عند التوليد سيتم استبدال اسم المورد تلقائيًا بالاسم البديل إن وُجد لرمزه. يتم حفظ الجدول تلقائيًا في متصفحك.</label>
       <div class="actions" style="margin-top:0;margin-bottom:12px;">
         <button type="button" class="secondary" id="importAliasExcelBtn">📄 استيراد من ملف Excel</button>
         <input type="file" id="aliasExcelFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+        <button type="button" class="secondary" id="downloadAliasBtn">⬇️ تنزيل الأسماء كملف Excel</button>
         <button type="button" id="saveAliasBtn">💾 حفظ / تحديث الأسماء</button>
         <button type="button" class="danger" id="clearAliasBtn">🗑️ مسح الأسماء المحفوظة</button>
       </div>
-      <textarea id="aliasData" placeholder="SupplierCode&#9;alias&#10;0201&#9;باوارث"></textarea>
+
+      <div class="alias-row alias-row-header">
+        <span>رمز المورد</span>
+        <span>الاسم البديل</span>
+        <span></span>
+      </div>
+      <div id="aliasTable" class="alias-rows"></div>
+      <button type="button" class="secondary" id="addAliasRowBtn">➕ إضافة مورد</button>
+
+      <button type="button" class="alias-toggle" id="aliasPasteToggleBtn">📋 لصق نص دفعة واحدة (متقدم)</button>
+      <div id="aliasPastePanel" style="display:none;">
+        <textarea id="aliasData" placeholder="SupplierCode&#9;alias&#10;0201&#9;باوارث"></textarea>
+        <div class="actions" style="margin-top:8px;margin-bottom:0;">
+          <button type="button" class="secondary" id="syncAliasFromTextBtn">⬇️ تحديث الجدول من النص أعلاه</button>
+        </div>
+      </div>
+
       <div class="msg" id="aliasMsg"></div>
     </div>
   </div>
@@ -262,7 +310,16 @@
     <div class="row">
       <div>
         <label>اسم الفرع (اختياري)</label>
-        <input type="text" id="branchName" placeholder="مثال: الدائري">
+        <select id="branchSelect">
+          <option value="">— بدون اسم فرع —</option>
+          <option value="الدائري">الدائري</option>
+          <option value="التحلية">التحلية</option>
+          <option value="البديعة">البديعة</option>
+          <option value="الفيحاء">الفيحاء</option>
+          <option value="القصيم">القصيم</option>
+          <option value="__custom__">أخرى (اكتب الاسم)</option>
+        </select>
+        <input type="text" id="branchCustom" placeholder="اكتب اسم الفرع" style="display:none;margin-top:8px;">
       </div>
       <div>
         <label>التاريخ</label>
@@ -475,7 +532,7 @@ function wireExcelImport(buttonId, fileInputId, textareaId, msgId, itemLabel, on
 }
 
 wireExcelImport('importExcelBtn', 'excelFileInput', 'rawData', 'parseMsg', 'صف بيانات');
-wireExcelImport('importAliasExcelBtn', 'aliasExcelFileInput', 'aliasData', 'aliasMsg', 'اسمًا بديلاً', saveAliasStorage);
+wireExcelImport('importAliasExcelBtn', 'aliasExcelFileInput', 'aliasData', 'aliasMsg', 'اسمًا بديلاً', refreshAliasRowsFromTextarea);
 
 document.getElementById('aliasToggleBtn').addEventListener('click', ()=>{
   const panel = document.getElementById('aliasPanel');
@@ -498,13 +555,111 @@ function loadAliasStorage(){
   try{ return localStorage.getItem(ALIAS_STORAGE_KEY) || ''; }catch(e){ return ''; }
 }
 
+// يستخرج صفوفًا مرتّبة {code, alias} من نص TSV بغض النظر عن عدد الأعمدة أو أسمائها
+function parseAliasRows(raw){
+  const rows = splitRows(raw);
+  if(rows.length < 2) return [];
+  const header = rows[0].map(h=>h.toUpperCase());
+  let codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز'));
+  let aliasIdx = header.findIndex(h=>h.includes('ALIAS') || h.includes('بديل'));
+  if(codeIdx===-1 || aliasIdx===-1){
+    if(rows[0].length < 2) return [];
+    codeIdx = 0;
+    aliasIdx = rows[0].length - 1;
+  }
+  return rows.slice(1)
+    .map(r => ({code: r[codeIdx] || '', alias: r[aliasIdx] || ''}))
+    .filter(r => r.code || r.alias);
+}
+
+function aliasRowsToTSV(rows){
+  const lines = ['SupplierCode\talias'];
+  rows.forEach(r => lines.push(`${r.code}\t${r.alias}`));
+  return lines.join('\n');
+}
+
 const aliasDataEl = document.getElementById('aliasData');
-const savedAlias = loadAliasStorage();
-if(savedAlias){
-  aliasDataEl.value = savedAlias;
+const savedAliasRaw = loadAliasStorage();
+let aliasRows = parseAliasRows(savedAliasRaw);
+if(aliasRows.length === 0) aliasRows = [{code:'', alias:''}];
+
+function syncAliasFromRows(){
+  aliasDataEl.value = aliasRowsToTSV(aliasRows);
+  saveAliasStorage();
+}
+
+function renderAliasTable(){
+  const container = document.getElementById('aliasTable');
+  container.innerHTML = '';
+  aliasRows.forEach((row, i)=>{
+    const rowEl = document.createElement('div');
+    rowEl.className = 'alias-row';
+
+    const codeInput = document.createElement('input');
+    codeInput.type = 'text';
+    codeInput.className = 'code';
+    codeInput.value = row.code;
+    codeInput.placeholder = 'مثال: 0201';
+    codeInput.addEventListener('input', ()=>{ aliasRows[i].code = codeInput.value; syncAliasFromRows(); });
+
+    const aliasInput = document.createElement('input');
+    aliasInput.type = 'text';
+    aliasInput.placeholder = 'الاسم البديل';
+    aliasInput.value = row.alias;
+    aliasInput.addEventListener('input', ()=>{ aliasRows[i].alias = aliasInput.value; syncAliasFromRows(); });
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'alias-row-delete';
+    delBtn.title = 'حذف';
+    delBtn.textContent = '🗑️';
+    delBtn.addEventListener('click', ()=>{
+      aliasRows.splice(i, 1);
+      if(aliasRows.length === 0) aliasRows.push({code:'', alias:''});
+      syncAliasFromRows();
+      renderAliasTable();
+    });
+
+    rowEl.appendChild(codeInput);
+    rowEl.appendChild(aliasInput);
+    rowEl.appendChild(delBtn);
+    container.appendChild(rowEl);
+  });
+}
+
+function refreshAliasRowsFromTextarea(){
+  aliasRows = parseAliasRows(aliasDataEl.value);
+  if(aliasRows.length === 0) aliasRows = [{code:'', alias:''}];
+  renderAliasTable();
+  saveAliasStorage();
+}
+
+renderAliasTable();
+aliasDataEl.value = aliasRowsToTSV(aliasRows); // مزامنة عرض النص فقط، بلا كتابة إلى التخزين
+if(savedAliasRaw){
   document.getElementById('aliasPanel').style.display = 'block';
 }
 aliasDataEl.addEventListener('input', saveAliasStorage);
+
+document.getElementById('addAliasRowBtn').addEventListener('click', ()=>{
+  aliasRows.push({code:'', alias:''});
+  syncAliasFromRows();
+  renderAliasTable();
+  const inputs = document.querySelectorAll('#aliasTable .alias-row:last-child input');
+  if(inputs[0]) inputs[0].focus();
+});
+
+document.getElementById('aliasPasteToggleBtn').addEventListener('click', ()=>{
+  const panel = document.getElementById('aliasPastePanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('syncAliasFromTextBtn').addEventListener('click', ()=>{
+  refreshAliasRowsFromTextarea();
+  const aliasMsg = document.getElementById('aliasMsg');
+  aliasMsg.style.color = 'var(--muted)';
+  aliasMsg.textContent = `تم تحديث الجدول (${aliasRows.length} صفًا).`;
+});
 
 document.getElementById('saveAliasBtn').addEventListener('click', ()=>{
   const aliasMsg = document.getElementById('aliasMsg');
@@ -520,12 +675,46 @@ document.getElementById('saveAliasBtn').addEventListener('click', ()=>{
 });
 
 document.getElementById('clearAliasBtn').addEventListener('click', ()=>{
-  aliasDataEl.value = '';
+  aliasRows = [{code:'', alias:''}];
+  syncAliasFromRows();
+  renderAliasTable();
   try{ localStorage.removeItem(ALIAS_STORAGE_KEY); }catch(e){}
   const aliasMsg = document.getElementById('aliasMsg');
   aliasMsg.style.color = 'var(--muted)';
   aliasMsg.textContent = 'تم مسح الأسماء البديلة المحفوظة.';
 });
+
+document.getElementById('downloadAliasBtn').addEventListener('click', ()=>{
+  const aliasMsg = document.getElementById('aliasMsg');
+  const raw = aliasDataEl.value.trim();
+  if(!raw){
+    aliasMsg.style.color = 'var(--danger)';
+    aliasMsg.textContent = 'لا توجد أسماء بديلة لتنزيلها.';
+    return;
+  }
+  if(typeof XLSX === 'undefined'){
+    aliasMsg.style.color = 'var(--danger)';
+    aliasMsg.textContent = 'تعذّر تحميل مكتبة Excel. تحقق من الاتصال بالإنترنت وحاول مجددًا.';
+    return;
+  }
+  const ws = XLSX.utils.aoa_to_sheet(splitRows(raw));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'الأسماء البديلة');
+  XLSX.writeFile(wb, 'الأسماء-البديلة-للموردين.xlsx');
+  aliasMsg.style.color = 'var(--muted)';
+  aliasMsg.textContent = 'تم تنزيل ملف الأسماء البديلة.';
+});
+
+const branchSelect = document.getElementById('branchSelect');
+const branchCustom = document.getElementById('branchCustom');
+branchSelect.addEventListener('change', ()=>{
+  const isCustom = branchSelect.value === '__custom__';
+  branchCustom.style.display = isCustom ? 'block' : 'none';
+  if(isCustom) branchCustom.focus();
+});
+function getBranchName(){
+  return branchSelect.value === '__custom__' ? branchCustom.value.trim() : branchSelect.value;
+}
 
 const reportDateInput = document.getElementById('reportDate');
 reportDateInput.value = localISODate(-1);
@@ -560,7 +749,7 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
   genMsg.textContent = '';
   genMsg.style.color = 'var(--muted)';
   try{
-    const branch = document.getElementById('branchName').value.trim();
+    const branch = getBranchName();
     const dateVal = document.getElementById('reportDate').value;
     if(!dateVal) throw new Error('الرجاء إدخال التاريخ.');
 
