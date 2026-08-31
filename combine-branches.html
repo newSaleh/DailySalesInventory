@@ -614,6 +614,20 @@ function loadAliasStorage(){
   try{ return localStorage.getItem(ALIAS_STORAGE_KEY) || ''; }catch(e){ return ''; }
 }
 
+// قراءة مجموعات "دمج عدة موردين تحت اسم واحد" المحفوظة أصلًا من الصفحة الرئيسية (نفس المتصفح) —
+// هذه الصفحة لا تُعدّلها، فقط تطبّقها هنا أيضًا حتى يندمج مثل 0666/0999 حتى لو ظهرا في فرعين مختلفين
+const MERGE_STORAGE_KEY = 'supplierMergeGroups';
+const DEFAULT_MERGE_GROUPS = [{codesText:'666, 999', name:'اتش ار ام'}];
+function loadMergeGroups(){
+  try{
+    const raw = localStorage.getItem(MERGE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return parsed.length ? parsed : DEFAULT_MERGE_GROUPS;
+  }catch(e){
+    return DEFAULT_MERGE_GROUPS;
+  }
+}
+
 // جدول تطابق الرموز بين الرياض وجدة (نفس المورد الفعلي برقمين مختلفين)
 const PAIR_STORAGE_KEY = 'branchCodePairs';
 // قيمة افتراضية على مستوى الصفحة نفسها (وليست تخزينًا محليًا بجهاز بعينه) فتعمل على أي جهاز/متصفح دون إعداد إضافي
@@ -729,41 +743,54 @@ document.getElementById('clearPairBtn').addEventListener('click', ()=>{
   pairMsg.textContent = 'تم مسح جدول التطابق المحفوظ.';
 });
 
-// يدمج بيانات الرياض وجدة: كل زوج متطابق يصبح سطرًا واحدًا (مجموع المبيعات والمخزون، بدون رمز مورد)،
-// وأي مورد بلا مقابل يبقى سطرًا مستقلاً بكوده الأصلي
-function combineBranches(ruhRows, jedRows, pairs, aliasMap){
-  const ruhUsed = new Set();
-  const jedUsed = new Set();
-  const combined = [];
+function parseMergeCodes(codesText){
+  return (codesText || '').split(/[,،\s]+/).map(c=>c.trim()).filter(Boolean).map(normalizeCode);
+}
 
-  pairs.forEach(pair=>{
-    const ruhCode = normalizeCode(pair.ruh);
-    const jedCode = normalizeCode(pair.jed);
-    if(!ruhCode && !jedCode) return;
+// يحدد "هوية" موحّدة لرمز مورد: مجموعة دمج (كاتش ار ام) أولًا، ثم تطابق صريح بين الرياض/جدة
+// (يوحّد طرف جدة مع رمز الرياض المقابل)، وإلا فرمزه نفسه — وهذا يجعل الرمز المتطابق حرفيًا بين
+// الفرعين (بلا أي إعداد) يندمج تلقائيًا أيضًا، لأن صفّي الرياض وجدة سينتهي بهما لنفس المفتاح
+function canonicalKey(code, pairs, mergeGroups){
+  const norm = normalizeCode(code);
+  for(const g of mergeGroups){
+    const name = (g.name || '').trim();
+    if(name && parseMergeCodes(g.codesText).includes(norm)) return 'MERGEGROUP::' + name;
+  }
+  for(const p of pairs){
+    const ruhCode = normalizeCode(p.ruh);
+    const jedCode = normalizeCode(p.jed);
+    if(jedCode && norm === jedCode) return 'PAIR::' + (ruhCode || jedCode);
+    if(ruhCode && norm === ruhCode) return 'PAIR::' + ruhCode;
+  }
+  return 'CODE::' + norm;
+}
 
-    const ruhRow = ruhRows.find(r => normalizeCode(r.code) === ruhCode);
-    const jedRow = jedRows.find(r => normalizeCode(r.code) === jedCode);
-    if(!ruhRow && !jedRow) return;
-
-    if(ruhRow) ruhUsed.add(ruhRow);
-    if(jedRow) jedUsed.add(jedRow);
-
-    const name = aliasMap[ruhCode] || aliasMap[jedCode] || (ruhRow && ruhRow.name) || (jedRow && jedRow.name) || '';
-    combined.push({
-      code: '',
-      name,
-      displayName: name,
-      inventory: (ruhRow ? ruhRow.inventory : 0) + (jedRow ? jedRow.inventory : 0),
-      sales: (ruhRow ? ruhRow.sales : 0) + (jedRow ? jedRow.sales : 0)
-    });
+// يدمج بيانات الرياض وجدة صفًا بصف حسب الهوية الموحّدة: أي رمزين (أو أكثر) ينتميان لنفس الهوية
+// (سواء عبر جدول التطابق، أو مجموعات الدمج المشتركة مع الصفحة الرئيسية، أو لتطابق رمزيهما حرفيًا
+// في الفرعين) يُجمعان في سطر واحد بدون رمز مورد؛ أي مورد منفرد بلا أي تطابق يبقى بكوده الأصلي
+function combineBranches(ruhRows, jedRows, pairs, mergeGroups, aliasMap){
+  const groups = new Map();
+  ruhRows.concat(jedRows).forEach(row=>{
+    const key = canonicalKey(row.code, pairs, mergeGroups);
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
   });
 
-  const unmatchedRuh = ruhRows.filter(r => !ruhUsed.has(r))
-    .map(r => ({...r, displayName: aliasMap[normalizeCode(r.code)] || r.name}));
-  const unmatchedJed = jedRows.filter(r => !jedUsed.has(r))
-    .map(r => ({...r, displayName: aliasMap[normalizeCode(r.code)] || r.name}));
-
-  return combined.concat(unmatchedRuh, unmatchedJed);
+  const result = [];
+  groups.forEach((rows, key)=>{
+    const isGrouped = rows.length > 1 || key.startsWith('MERGEGROUP::') || key.startsWith('PAIR::');
+    const name = key.startsWith('MERGEGROUP::')
+      ? key.slice('MERGEGROUP::'.length)
+      : (aliasMap[normalizeCode(rows[0].code)] || rows[0].name);
+    result.push({
+      code: isGrouped ? '' : rows[0].code,
+      name,
+      displayName: name,
+      inventory: rows.reduce((a,r)=>a+r.inventory, 0),
+      sales: rows.reduce((a,r)=>a+r.sales, 0)
+    });
+  });
+  return result;
 }
 
 const reportDateInput = document.getElementById('reportDate');
@@ -805,13 +832,14 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
     if(!dateVal) throw new Error('الرجاء إدخال التاريخ.');
 
     const aliasMap = parseAliasMap(loadAliasStorage());
+    const mergeGroups = loadMergeGroups();
     const ruhRows = parseData(document.getElementById('rawDataRUH').value);
     const jedRows = parseData(document.getElementById('rawDataJED').value);
     if(ruhRows.length === 0 && jedRows.length === 0){
       throw new Error('الرجاء لصق بيانات الرياض أو جدة على الأقل.');
     }
 
-    const rows = combineBranches(ruhRows, jedRows, pairRows, aliasMap)
+    const rows = combineBranches(ruhRows, jedRows, pairRows, mergeGroups, aliasMap)
       .sort((a,b)=> b.sales - a.sales);
 
     const totalSales = rows.reduce((a,r)=>a+r.sales,0);
