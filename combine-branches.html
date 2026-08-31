@@ -617,7 +617,7 @@ function loadAliasStorage(){
 // قراءة مجموعات "دمج عدة موردين تحت اسم واحد" المحفوظة أصلًا من الصفحة الرئيسية (نفس المتصفح) —
 // هذه الصفحة لا تُعدّلها، فقط تطبّقها هنا أيضًا حتى يندمج مثل 0666/0999 حتى لو ظهرا في فرعين مختلفين
 const MERGE_STORAGE_KEY = 'supplierMergeGroups';
-const DEFAULT_MERGE_GROUPS = [{codesText:'666, 999', name:'اتش ار ام'}];
+const DEFAULT_MERGE_GROUPS = [{codesText:'666, 999, 418', name:'اتش ار ام'}];
 function loadMergeGroups(){
   try{
     const raw = localStorage.getItem(MERGE_STORAGE_KEY);
