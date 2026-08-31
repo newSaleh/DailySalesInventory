@@ -64,6 +64,29 @@
   .app-header h1{font-size:22px;margin:0;font-weight:900;}
   .app-header span{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
   .header-right{display:flex;align-items:center;gap:12px;}
+  .update-banner{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    background:var(--card);
+    border:1px solid var(--accent);
+    border-radius:10px;
+    padding:12px 16px;
+    margin-bottom:18px;
+    font-size:14px;
+  }
+  .update-banner button{
+    border:none;
+    border-radius:8px;
+    padding:8px 14px;
+    font-family:inherit;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .update-banner .apply-update{background:var(--accent);color:#fff;font-weight:700;}
+  .update-banner .dismiss-update{background:transparent;color:var(--muted);}
   .theme-toggle{
     background:var(--card);
     border:1px solid var(--line);
@@ -317,6 +340,14 @@
       <span>Combined Branches Report</span>
       <a href="index.html" class="theme-toggle" title="العودة إلى صفحة التقرير الرئيسية">🏠</a>
       <button type="button" id="themeToggleBtn" class="theme-toggle" title="تبديل الوضع الداكن">🌙</button>
+    </div>
+  </div>
+
+  <div id="updateBanner" class="update-banner no-print" hidden>
+    <span>🔔 يتوفر تحديث لإعدادات الدمج الافتراضية على هذا الجهاز (تمت إضافتها من الصفحة الرئيسية).</span>
+    <div>
+      <button type="button" class="apply-update" id="applyUpdateBtn">تحديث الآن</button>
+      <button type="button" class="dismiss-update" id="dismissUpdateBtn">تجاهل</button>
     </div>
   </div>
 
@@ -627,6 +658,54 @@ function loadMergeGroups(){
     return DEFAULT_MERGE_GROUPS;
   }
 }
+
+// إن كان هذا الجهاز يحفظ مجموعات دمج قديمة لا تحتوي آخر الرموز الافتراضية (كإضافة رمز جديد لاتش ار ام)،
+// نعرض تنبيهًا بزر "تحديث الآن" يضيف الرموز الناقصة فقط دون حذف أي تخصيص أضافه المستخدم بنفسه
+const MERGE_DISMISS_KEY = 'mergeDefaultsDismissedSnapshot';
+function mergeGroupsMissingDefaults(current, defaults){
+  return defaults.some(def=>{
+    const defCodes = parseMergeCodes(def.codesText);
+    const match = current.find(g => (g.name || '').trim() === def.name.trim());
+    if(!match) return true;
+    const curCodes = parseMergeCodes(match.codesText);
+    return defCodes.some(c => !curCodes.includes(c));
+  });
+}
+(function checkMergeDefaultsUpdate(){
+  let stored = [];
+  try{
+    const raw = localStorage.getItem(MERGE_STORAGE_KEY);
+    stored = raw ? JSON.parse(raw) : [];
+  }catch(e){}
+  if(stored.length === 0 || !mergeGroupsMissingDefaults(stored, DEFAULT_MERGE_GROUPS)) return;
+  let dismissedSnapshot = '';
+  try{ dismissedSnapshot = localStorage.getItem(MERGE_DISMISS_KEY) || ''; }catch(e){}
+  if(dismissedSnapshot !== JSON.stringify(DEFAULT_MERGE_GROUPS)){
+    document.getElementById('updateBanner').hidden = false;
+  }
+})();
+
+document.getElementById('applyUpdateBtn').addEventListener('click', ()=>{
+  let stored = loadMergeGroups();
+  if(!Array.isArray(stored) || stored === DEFAULT_MERGE_GROUPS) stored = [];
+  DEFAULT_MERGE_GROUPS.forEach(def=>{
+    const defCodes = parseMergeCodes(def.codesText);
+    const match = stored.find(g => (g.name || '').trim() === def.name.trim());
+    if(!match){
+      stored.push({codesText: def.codesText, name: def.name});
+    }else{
+      const curCodes = parseMergeCodes(match.codesText);
+      match.codesText = Array.from(new Set(curCodes.concat(defCodes))).join(', ');
+    }
+  });
+  try{ localStorage.setItem(MERGE_STORAGE_KEY, JSON.stringify(stored)); }catch(e){}
+  document.getElementById('updateBanner').hidden = true;
+});
+
+document.getElementById('dismissUpdateBtn').addEventListener('click', ()=>{
+  try{ localStorage.setItem(MERGE_DISMISS_KEY, JSON.stringify(DEFAULT_MERGE_GROUPS)); }catch(e){}
+  document.getElementById('updateBanner').hidden = true;
+});
 
 // جدول تطابق الرموز بين الرياض وجدة (نفس المورد الفعلي برقمين مختلفين)
 const PAIR_STORAGE_KEY = 'branchCodePairs';
