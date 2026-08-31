@@ -767,7 +767,8 @@ function canonicalKey(code, pairs, mergeGroups){
 
 // يدمج بيانات الرياض وجدة صفًا بصف حسب الهوية الموحّدة: أي رمزين (أو أكثر) ينتميان لنفس الهوية
 // (سواء عبر جدول التطابق، أو مجموعات الدمج المشتركة مع الصفحة الرئيسية، أو لتطابق رمزيهما حرفيًا
-// في الفرعين) يُجمعان في سطر واحد بدون رمز مورد؛ أي مورد منفرد بلا أي تطابق يبقى بكوده الأصلي
+// في الفرعين) يُجمعان في سطر واحد؛ وبما أن هذه الصفحة تعرض بيانات فرعين مختلفين برموز قد تتعارض،
+// لا يُعرض رقم المورد إطلاقًا في ناتجها (فقط الاسم والمبيعات)، سواء اندمج الصف أم بقي منفردًا
 function combineBranches(ruhRows, jedRows, pairs, mergeGroups, aliasMap){
   const groups = new Map();
   ruhRows.concat(jedRows).forEach(row=>{
@@ -778,12 +779,11 @@ function combineBranches(ruhRows, jedRows, pairs, mergeGroups, aliasMap){
 
   const result = [];
   groups.forEach((rows, key)=>{
-    const isGrouped = rows.length > 1 || key.startsWith('MERGEGROUP::') || key.startsWith('PAIR::');
     const name = key.startsWith('MERGEGROUP::')
       ? key.slice('MERGEGROUP::'.length)
       : (aliasMap[normalizeCode(rows[0].code)] || rows[0].name);
     result.push({
-      code: isGrouped ? '' : rows[0].code,
+      code: '',
       name,
       displayName: name,
       inventory: rows.reduce((a,r)=>a+r.inventory, 0),
