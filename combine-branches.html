@@ -353,23 +353,16 @@
 
   <div class="panel no-print">
     <h2>الخطوة ١ — لصق بيانات الرياض وجدة</h2>
-    <label>هذه صفحة مستقلة لا تؤثر على صفحة التقرير الرئيسية. الصق بيانات كل فرع في مربعه (بترتيب: رمز المورد ثم اسم المورد ثم المخزون ثم المبيعات)، أو استورد ملف Excel. تُستخدم الأسماء البديلة المحفوظة مسبقًا في الصفحة الرئيسية تلقائيًا هنا أيضًا (نفس المتصفح).</label>
+    <label>هذه صفحة مستقلة لا تؤثر على صفحة التقرير الرئيسية. الصق بيانات الرياض ثم بيانات جدة في نفس الصندوق أدناه، كل منهما مع صف عناوينه الخاص (رقم المورد / اسم المورد / المخزون / المبيعات) — تمامًا كما تنسخهما من الإكسل، فقط الصق الرياض أولًا ثم جدة مباشرة تحتها بدون حذف أي صف عناوين. أو استورد كل ملف Excel بزره الخاص وسيُضاف تلقائيًا إلى نفس الصندوق. تُستخدم الأسماء البديلة المحفوظة مسبقًا في الصفحة الرئيسية تلقائيًا هنا أيضًا (نفس المتصفح).</label>
 
-    <label style="margin-top:14px;font-weight:700;">بيانات الرياض (RUH)</label>
     <div class="actions" style="margin-top:0;margin-bottom:12px;">
-      <button type="button" class="secondary" id="importRuhBtn">📄 استيراد من ملف Excel</button>
+      <button type="button" class="secondary" id="importRuhBtn">📄 استيراد بيانات الرياض من Excel</button>
       <input type="file" id="ruhFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
-    </div>
-    <textarea id="rawDataRUH" placeholder="رقم المورد&#9;اسم المورد&#9;المخزون&#9;المبيعات&#10;0115&#9;شركة باوارث للملابس الجاهزة&#9;843996.00&#9;10915.00"></textarea>
-    <div class="msg" id="ruhMsg"></div>
-
-    <label style="margin-top:14px;font-weight:700;">بيانات جدة (JED)</label>
-    <div class="actions" style="margin-top:0;margin-bottom:12px;">
-      <button type="button" class="secondary" id="importJedBtn">📄 استيراد من ملف Excel</button>
+      <button type="button" class="secondary" id="importJedBtn">📄 استيراد بيانات جدة من Excel</button>
       <input type="file" id="jedFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
     </div>
-    <textarea id="rawDataJED" placeholder="رقم المورد&#9;اسم المورد&#9;المخزون&#9;المبيعات&#10;0201&#9;شركة باوارث للملابس الجاهزة - راقي&#9;1721002.00&#9;21158.00"></textarea>
-    <div class="msg" id="jedMsg"></div>
+    <textarea id="rawDataCombined" style="min-height:280px;" placeholder="رقم المورد&#9;اسم المورد&#9;المخزون&#9;المبيعات&#10;0115&#9;شركة باوارث للملابس الجاهزة&#9;843996.00&#9;10915.00&#10;...&#10;رقم المورد&#9;اسم المورد&#9;المخزون&#9;المبيعات&#10;0201&#9;شركة باوارث للملابس الجاهزة - راقي&#9;1721002.00&#9;21158.00"></textarea>
+    <div class="msg" id="combinedMsg"></div>
 
     <button type="button" class="alias-toggle icon-toggle" id="pairToggleBtn" title="جدول تطابق الرموز بين الرياض وجدة — لتحديد أي الرموز تمثل نفس المورد">🔗</button>
     <div id="pairPanel" style="display:none;">
@@ -399,6 +392,15 @@
       <div>
         <label>التاريخ</label>
         <input type="date" id="reportDate">
+      </div>
+      <div>
+        <label>عدد الموردين المعروضين</label>
+        <select id="supplierLimitSelect">
+          <option value="">الكل</option>
+          <option value="20">أفضل 20 موردًا</option>
+          <option value="30">أفضل 30 موردًا</option>
+          <option value="50">أفضل 50 موردًا</option>
+        </select>
       </div>
     </div>
   </div>
@@ -526,23 +528,39 @@ function splitRows(raw){
   return rows;
 }
 
-function parseData(raw){
-  const rows = splitRows(raw);
-  if(rows.length < 2) throw new Error("لم يتم العثور على بيانات كافية. الصق سطر العناوين ثم صفوف بيانات الموردين.");
-
-  const header = rows[0].map(h=>h.toUpperCase());
-  let codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز'));
+function headerColumnIndexes(headerRow){
+  const header = headerRow.map(h=>h.toUpperCase());
+  let codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز') || h.includes('رقم'));
   let nameIdx = header.findIndex(h=>h.includes('NAME') || h.includes('اسم'));
   let invIdx = header.findIndex(h=>h.includes('INVENTORY') || h.includes('مخزون'));
   let salesIdx = header.findIndex(h=>h.includes('SALES') || h.includes('مبيعات'));
-
   if(codeIdx===-1 || nameIdx===-1 || invIdx===-1 || salesIdx===-1){
-    if(rows[0].length >= 4){
+    if(headerRow.length >= 4){
       codeIdx = 0; nameIdx = 1; invIdx = 2; salesIdx = 3;
     } else {
-      throw new Error("تعذّر التعرّف على أعمدة رمز المورد / اسم المورد / المخزون / المبيعات في سطر العناوين.");
+      return null;
     }
   }
+  return {codeIdx, nameIdx, invIdx, salesIdx};
+}
+
+// هل يبدو هذا الصف صف عناوين (يحتوي أعمدة رمز/اسم/مخزون/مبيعات قابلة للتعرّف)؟ نستخدمه لتقسيم صندوق
+// اللصق الواحد إلى بيانات الرياض وجدة كلٌّ على حدة كلما تكرر ظهور صف عناوين (بدل صندوقين منفصلين)
+function looksLikeHeaderRow(row){
+  const header = row.map(h=>h.toUpperCase());
+  const codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز') || h.includes('رقم'));
+  const nameIdx = header.findIndex(h=>h.includes('NAME') || h.includes('اسم'));
+  const invIdx = header.findIndex(h=>h.includes('INVENTORY') || h.includes('مخزون'));
+  const salesIdx = header.findIndex(h=>h.includes('SALES') || h.includes('مبيعات'));
+  return codeIdx!==-1 && nameIdx!==-1 && invIdx!==-1 && salesIdx!==-1;
+}
+
+function parseDataFromRows(rows){
+  if(rows.length < 2) throw new Error("لم يتم العثور على بيانات كافية. الصق سطر العناوين ثم صفوف بيانات الموردين.");
+
+  const idx = headerColumnIndexes(rows[0]);
+  if(!idx) throw new Error("تعذّر التعرّف على أعمدة رمز المورد / اسم المورد / المخزون / المبيعات في سطر العناوين.");
+  const {codeIdx, nameIdx, invIdx, salesIdx} = idx;
 
   const dataRows = rows.slice(1).filter(r=>r.length > Math.max(codeIdx,nameIdx,invIdx,salesIdx) && r[codeIdx]);
 
@@ -558,13 +576,34 @@ function parseData(raw){
   });
 }
 
+function parseData(raw){
+  return parseDataFromRows(splitRows(raw));
+}
+
+// يقسم نص صندوق اللصق الواحد إلى قسمَي الرياض وجدة عند ثاني صف عناوين يظهر فيه (كل مدينة تُلصق
+// بصفّ عناوينها الخاص، تمامًا كما تُنسخ من الإكسل). إن لم يوجد سوى صف عناوين واحد، يُعتبر كل
+// النص بيانات فرع واحد (الرياض) وتبقى بيانات جدة فارغة
+function splitCombinedRaw(raw){
+  const rows = splitRows(raw);
+  const headerIdxs = [];
+  rows.forEach((r,i)=>{ if(looksLikeHeaderRow(r)) headerIdxs.push(i); });
+
+  if(headerIdxs.length >= 2){
+    const ruhRows = rows.slice(headerIdxs[0], headerIdxs[1]);
+    const jedRows = rows.slice(headerIdxs[1]);
+    return { ruhRows: parseDataFromRows(ruhRows), jedRows: parseDataFromRows(jedRows) };
+  }
+  if(rows.length === 0) return { ruhRows: [], jedRows: [] };
+  return { ruhRows: parseDataFromRows(rows), jedRows: [] };
+}
+
 function parseAliasMap(raw){
   const map = {};
   const rows = splitRows(raw);
   if(rows.length < 2) return map;
 
   const header = rows[0].map(h=>h.toUpperCase());
-  let codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز'));
+  let codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز') || h.includes('رقم'));
   let aliasIdx = header.findIndex(h=>h.includes('ALIAS') || h.includes('بديل'));
   if(codeIdx===-1 || aliasIdx===-1){
     if(rows[0].length < 2) return map;
@@ -586,7 +625,7 @@ function excelCellToText(cell){
   return String(cell ?? '').trim();
 }
 
-function wireExcelImport(buttonId, fileInputId, textareaId, msgId, itemLabel){
+function wireExcelImport(buttonId, fileInputId, textareaId, msgId, itemLabel, appendMode){
   const btn = document.getElementById(buttonId);
   const fileInput = document.getElementById(fileInputId);
   const msg = document.getElementById(msgId);
@@ -617,7 +656,9 @@ function wireExcelImport(buttonId, fileInputId, textareaId, msgId, itemLabel){
         const tsvLines = nonEmptyRows.map(r => r.map(c => excelCellToText(c)).join('\t'));
         if(tsvLines.length === 0) throw new Error('الملف لا يحتوي على بيانات.');
 
-        document.getElementById(textareaId).value = tsvLines.join('\n');
+        const textarea = document.getElementById(textareaId);
+        const existing = appendMode ? textarea.value.trim() : '';
+        textarea.value = existing ? existing + '\n' + tsvLines.join('\n') : tsvLines.join('\n');
         msg.style.color = 'var(--muted)';
         msg.textContent = `تم استيراد ${Math.max(tsvLines.length - 1, 0)} ${itemLabel} من الملف "${file.name}".`;
       }catch(err){
@@ -636,8 +677,8 @@ function wireExcelImport(buttonId, fileInputId, textareaId, msgId, itemLabel){
   });
 }
 
-wireExcelImport('importRuhBtn', 'ruhFileInput', 'rawDataRUH', 'ruhMsg', 'صف بيانات (الرياض)');
-wireExcelImport('importJedBtn', 'jedFileInput', 'rawDataJED', 'jedMsg', 'صف بيانات (جدة)');
+wireExcelImport('importRuhBtn', 'ruhFileInput', 'rawDataCombined', 'combinedMsg', 'صف بيانات (الرياض)', true);
+wireExcelImport('importJedBtn', 'jedFileInput', 'rawDataCombined', 'combinedMsg', 'صف بيانات (جدة)', true);
 
 // قراءة الأسماء البديلة المحفوظة أصلًا من الصفحة الرئيسية (نفس المتصفح/المتصفح فقط) — هذه الصفحة لا تُعدّلها
 const ALIAS_STORAGE_KEY = 'supplierAliasMapping';
@@ -659,17 +700,16 @@ function loadMergeGroups(){
   }
 }
 
-// إن كان هذا الجهاز يحفظ مجموعات دمج قديمة لا تحتوي آخر الرموز الافتراضية (كإضافة رمز جديد لاتش ار ام)،
-// نعرض تنبيهًا بزر "تحديث الآن" يضيف الرموز الناقصة فقط دون حذف أي تخصيص أضافه المستخدم بنفسه
-const MERGE_DISMISS_KEY = 'mergeDefaultsDismissedSnapshot';
-function mergeGroupsMissingDefaults(current, defaults){
-  return defaults.some(def=>{
-    const defCodes = parseMergeCodes(def.codesText);
-    const match = current.find(g => (g.name || '').trim() === def.name.trim());
-    if(!match) return true;
-    const curCodes = parseMergeCodes(match.codesText);
-    return defCodes.some(c => !curCodes.includes(c));
-  });
+// رقم إصدار الإعدادات الافتراضية لمجموعات الدمج — يُرفع هذا الرقم كلما تغيّرت DEFAULT_MERGE_GROUPS.
+// نتحقق من رقم آخر إصدار طُبِّق على هذا الجهاز (رقم صريح، وليس مقارنة محتوى) لتفادي أي مشاكل تطابق
+// نصوص/أرقام تجعل التنبيه يستمر بالظهور رغم أن التحديث طُبِّق فعليًا
+const MERGE_DEFAULTS_VERSION = 2;
+const MERGE_DEFAULTS_APPLIED_KEY = 'mergeDefaultsAppliedVersion';
+function getAppliedMergeDefaultsVersion(){
+  try{ return parseInt(localStorage.getItem(MERGE_DEFAULTS_APPLIED_KEY) || '0', 10) || 0; }catch(e){ return 0; }
+}
+function setAppliedMergeDefaultsVersion(v){
+  try{ localStorage.setItem(MERGE_DEFAULTS_APPLIED_KEY, String(v)); }catch(e){}
 }
 (function checkMergeDefaultsUpdate(){
   let stored = [];
@@ -677,10 +717,12 @@ function mergeGroupsMissingDefaults(current, defaults){
     const raw = localStorage.getItem(MERGE_STORAGE_KEY);
     stored = raw ? JSON.parse(raw) : [];
   }catch(e){}
-  if(stored.length === 0 || !mergeGroupsMissingDefaults(stored, DEFAULT_MERGE_GROUPS)) return;
-  let dismissedSnapshot = '';
-  try{ dismissedSnapshot = localStorage.getItem(MERGE_DISMISS_KEY) || ''; }catch(e){}
-  if(dismissedSnapshot !== JSON.stringify(DEFAULT_MERGE_GROUPS)){
+  if(stored.length === 0){
+    // لا يوجد أي تخصيص محفوظ على هذا الجهاز، فالافتراضي الحالي يُطبَّق تلقائيًا دون أي تنبيه
+    setAppliedMergeDefaultsVersion(MERGE_DEFAULTS_VERSION);
+    return;
+  }
+  if(getAppliedMergeDefaultsVersion() < MERGE_DEFAULTS_VERSION){
     document.getElementById('updateBanner').hidden = false;
   }
 })();
@@ -699,11 +741,12 @@ document.getElementById('applyUpdateBtn').addEventListener('click', ()=>{
     }
   });
   try{ localStorage.setItem(MERGE_STORAGE_KEY, JSON.stringify(stored)); }catch(e){}
+  setAppliedMergeDefaultsVersion(MERGE_DEFAULTS_VERSION);
   location.reload();
 });
 
 document.getElementById('dismissUpdateBtn').addEventListener('click', ()=>{
-  try{ localStorage.setItem(MERGE_DISMISS_KEY, JSON.stringify(DEFAULT_MERGE_GROUPS)); }catch(e){}
+  setAppliedMergeDefaultsVersion(MERGE_DEFAULTS_VERSION);
   document.getElementById('updateBanner').hidden = true;
 });
 
@@ -912,8 +955,7 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
 
     const aliasMap = parseAliasMap(loadAliasStorage());
     const mergeGroups = loadMergeGroups();
-    const ruhRows = parseData(document.getElementById('rawDataRUH').value);
-    const jedRows = parseData(document.getElementById('rawDataJED').value);
+    const { ruhRows, jedRows } = splitCombinedRaw(document.getElementById('rawDataCombined').value);
     if(ruhRows.length === 0 && jedRows.length === 0){
       throw new Error('الرجاء لصق بيانات الرياض أو جدة على الأقل.');
     }
@@ -925,16 +967,20 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
     const best = rows[0];
     const dateAr = formatDateArabic(dateVal);
 
+    const limitVal = document.getElementById('supplierLimitSelect').value;
+    const limit = limitVal ? parseInt(limitVal, 10) : null;
+    const displayRows = limit ? rows.slice(0, limit) : rows;
+
     const t1 = document.querySelector('#table1 tbody');
     t1.innerHTML = `
-      <tr><td>عدد الموردين</td><td class="num">${rows.length}</td></tr>
+      <tr><td>عدد الموردين المعروضين</td><td class="num">${displayRows.length}</td></tr>
       <tr><td>إجمالي مبيعات اليوم</td><td class="num">${numFmt(totalSales)}</td></tr>
       <tr class="best"><td>أفضل مورد مبيعًا (${best.displayName})</td><td class="num">${numFmt(best.sales)}</td></tr>
     `;
 
     const t2 = document.querySelector('#table2 tbody');
     t2.innerHTML = '';
-    rows.forEach(r=>{
+    displayRows.forEach(r=>{
       const pct = totalSales ? (r.sales/totalSales*100) : 0;
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${r.code}</td><td class="name">${r.displayName}</td><td class="num">${numFmt(r.inventory)}</td><td class="num">${numFmt(r.sales)}</td><td class="num">${pct.toFixed(1)}%</td>`;
@@ -946,14 +992,14 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
 
     currentFileName = branch ? `مبيعات فرع ${branch} ليوم ${dateAr}` : `مبيعات ليوم ${dateAr}`;
 
-    document.getElementById('copyText').value = buildCopyText(branch, dateAr, rows);
+    document.getElementById('copyText').value = buildCopyText(branch, dateAr, displayRows);
 
     document.getElementById('report').style.display = 'block';
     document.getElementById('printBtn').style.display = 'inline-block';
     document.getElementById('pngBtn').style.display = 'inline-block';
     document.getElementById('copyBtn').style.display = 'inline-block';
     document.getElementById('copyPanel').style.display = 'block';
-    genMsg.textContent = `تم توليد التقرير بنجاح (${rows.length} موردًا).`;
+    genMsg.textContent = `تم توليد التقرير بنجاح (${displayRows.length} موردًا).`;
   }catch(err){
     genMsg.style.color = 'var(--danger)';
     genMsg.textContent = 'خطأ: ' + err.message;
