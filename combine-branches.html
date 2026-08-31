@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دمج مبيعات الرياض وجدة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --ink:#1c1f26;
+    --paper:#f3f3f1;
+    --line:#d8d8d4;
+    --accent:#2f5fa8;
+    --danger:#9c3b3b;
+    --muted:#6b6f78;
+    --card:#ffffff;
+    --field-bg:#f7f7f5;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#e8e8e6;
+      --paper:#15161a;
+      --line:#2e3138;
+      --accent:#6fa0e6;
+      --danger:#e28080;
+      --muted:#95989f;
+      --card:#1e2027;
+      --field-bg:#191b20;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#e8e8e6;
+    --paper:#15161a;
+    --line:#2e3138;
+    --accent:#6fa0e6;
+    --danger:#e28080;
+    --muted:#95989f;
+    --card:#1e2027;
+    --field-bg:#191b20;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Tajawal', sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    padding:28px 16px 80px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+  .app-header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:3px solid var(--ink);
+    padding-bottom:14px;
+    margin-bottom:22px;
+  }
+  .app-header h1{font-size:22px;margin:0;font-weight:900;}
+  .app-header span{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .header-right{display:flex;align-items:center;gap:12px;}
+  .theme-toggle{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:8px;
+    width:32px;
+    height:32px;
+    padding:0;
+    font-size:15px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+
+  .panel{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px 20px;
+    margin-bottom:18px;
+  }
+  .panel h2{
+    font-size:14px;
+    margin:0 0 12px;
+    color:var(--ink);
+    font-weight:700;
+  }
+  label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
+  textarea{
+    width:100%;
+    min-height:160px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    direction:ltr;
+    text-align:left;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    resize:vertical;
+    background:var(--field-bg);
+  }
+  .row{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;}
+  .row > div{flex:1;min-width:180px;}
+  input[type=text], input[type=date], select{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-family:'Tajawal',sans-serif;
+    font-size:13.5px;
+    background:var(--field-bg);
+  }
+  .actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  button{
+    font-family:'Tajawal',sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    padding:10px 18px;
+    border-radius:6px;
+    border:1px solid var(--accent);
+    cursor:pointer;
+    background:var(--accent);
+    color:#fff;
+  }
+  button.secondary{background:var(--card);color:var(--ink);border-color:var(--line);}
+  button.danger{background:var(--card);color:var(--muted);border-color:var(--line);}
+  button:hover{opacity:.9;}
+  .msg{font-size:12.5px;color:var(--muted);margin-top:10px;min-height:16px;}
+
+  .alias-toggle{
+    background:none;
+    border:none;
+    color:var(--accent);
+    font-family:'Tajawal',sans-serif;
+    font-weight:700;
+    font-size:12.5px;
+    cursor:pointer;
+    padding:6px 0;
+    text-decoration:underline;
+  }
+  .icon-toggle{
+    font-size:19px;
+    padding:4px 10px;
+    text-decoration:none;
+  }
+  #pairPanel{
+    margin-top:12px;
+    padding-top:14px;
+    border-top:1px dashed var(--line);
+  }
+
+  .alias-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+  .alias-row{display:flex;gap:8px;align-items:center;}
+  .alias-row input{
+    flex:1;
+    min-width:0;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-family:'Tajawal',sans-serif;
+    font-size:13.5px;
+    background:var(--field-bg);
+  }
+  .alias-row input.code, .alias-row-header span:first-child{flex:0 0 90px;}
+  .alias-row button.alias-row-delete{
+    flex:0 0 40px;
+    padding:8px 0;
+    text-align:center;
+    background:var(--card);
+    color:var(--muted);
+    border-color:var(--line);
+  }
+  .alias-row-header{
+    font-size:11.5px;
+    color:var(--muted);
+    font-weight:700;
+    margin-bottom:2px;
+  }
+  .alias-row-header span:nth-child(2){flex:1;}
+  .alias-row-header span:last-child{flex:0 0 40px;}
+  #addPairRowBtn{margin-bottom:4px;}
+
+  #copyText{
+    width:100%;
+    min-height:220px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    direction:rtl;
+    text-align:right;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    resize:vertical;
+    background:var(--field-bg);
+    white-space:pre;
+  }
+
+  /* ---- Report ----
+     التقرير المولّد بطاقة "ورقية" ثابتة المظهر دائمًا (بغض النظر عن الوضع الداكن/الفاتح للواجهة)
+     تمامًا كصفحة مطبوعة، لذا يعيد ضبط متغيرات الألوان إلى قيمها الفاتحة الأصلية */
+  #report{display:none;}
+  .report-page{
+    --ink:#182333;
+    --paper:#eef2f7;
+    --line:#c4cedb;
+    --accent:#2f5fa8;
+    --accent-dark:#1d3f75;
+    --danger:#9c3b3b;
+    --muted:#5b6472;
+    --card:#ffffff;
+    color-scheme:light;
+    background:#fff;
+    color:var(--ink);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:34px 38px;
+  }
+  .report-title{
+    text-align:center;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:14px;
+    margin-bottom:24px;
+  }
+  .report-logo{
+    display:block;
+    margin:0 auto 12px;
+    max-width:220px;
+    height:auto;
+  }
+  .report-title h1{font-size:20px;margin:0 0 4px;font-weight:900;}
+  .report-title .sub{font-size:12.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+
+  table.rt{
+    width:100%;
+    margin:0 auto;
+    margin-bottom:26px;
+    border-collapse:collapse;
+    font-size:14px;
+  }
+  table.rt.narrow{width:75%;}
+  table.rt caption{
+    text-align:right;
+    font-weight:700;
+    font-size:14px;
+    color:var(--accent-dark);
+    margin-bottom:8px;
+    caption-side:top;
+  }
+  table.rt th, table.rt td{
+    border:1px solid var(--line);
+    padding:6px 8px;
+    text-align:center;
+  }
+  table.rt td.name{text-align:right;}
+  table.rt thead th{
+    background:var(--accent-dark);
+    color:#fff;
+    font-weight:700;
+  }
+  table.rt tbody tr:nth-child(even){background:#eef2f7;}
+  table.rt td.num, table.rt th.num{
+    font-family:'IBM Plex Mono',monospace;
+    direction:ltr;
+    text-align:center;
+  }
+  table.rt tr.best td{color:var(--accent-dark);font-weight:700;}
+
+  .report-footer{
+    display:flex;
+    justify-content:space-between;
+    font-size:11px;
+    color:var(--muted);
+    border-top:1px solid var(--line);
+    padding-top:10px;
+    margin-top:6px;
+  }
+
+  @media print{
+    body{background:#fff;padding:0;color:#000;}
+    .no-print{display:none !important;}
+    #report{display:block !important;}
+    .report-page{border:none;border-radius:0;padding:0;}
+    @page{size:A4;margin:10mm;}
+
+    .report-logo{display:none;}
+    .report-title{border-bottom-color:#000;padding-top:4px;}
+    .report-title h1, .report-title .sub{color:#000;}
+    table.rt caption{display:none;}
+    table.rt th, table.rt td{border-color:#000;color:#000;}
+    table.rt thead th{background:#fff;color:#000;border-width:1.5px;}
+    table.rt tbody tr:nth-child(even){background:#f0f0f0;}
+    table.rt tr.best td{color:#000;}
+    .report-footer{color:#000;border-top-color:#000;}
+
+    #table1{display:none;}
+
+    body, .report-title h1, table.rt, table.rt caption, table.rt td.num, table.rt th.num{
+      font-family:'Tajawal', sans-serif !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="app-header no-print">
+    <h1>دمج مبيعات الرياض وجدة</h1>
+    <div class="header-right">
+      <span>Combined Branches Report</span>
+      <button type="button" id="themeToggleBtn" class="theme-toggle" title="تبديل الوضع الداكن">🌙</button>
+    </div>
+  </div>
+
+  <div class="panel no-print">
+    <h2>الخطوة ١ — لصق بيانات الرياض وجدة</h2>
+    <label>هذه صفحة مستقلة لا تؤثر على صفحة التقرير الرئيسية. الصق بيانات كل فرع في مربعه (بترتيب: رمز المورد ثم اسم المورد ثم المخزون ثم المبيعات)، أو استورد ملف Excel. تُستخدم الأسماء البديلة المحفوظة مسبقًا في الصفحة الرئيسية تلقائيًا هنا أيضًا (نفس المتصفح).</label>
+
+    <label style="margin-top:14px;font-weight:700;">بيانات الرياض (RUH)</label>
+    <div class="actions" style="margin-top:0;margin-bottom:12px;">
+      <button type="button" class="secondary" id="importRuhBtn">📄 استيراد من ملف Excel</button>
+      <input type="file" id="ruhFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+    </div>
+    <textarea id="rawDataRUH" placeholder="رقم المورد&#9;اسم المورد&#9;المخزون&#9;المبيعات&#10;0115&#9;شركة باوارث للملابس الجاهزة&#9;843996.00&#9;10915.00"></textarea>
+    <div class="msg" id="ruhMsg"></div>
+
+    <label style="margin-top:14px;font-weight:700;">بيانات جدة (JED)</label>
+    <div class="actions" style="margin-top:0;margin-bottom:12px;">
+      <button type="button" class="secondary" id="importJedBtn">📄 استيراد من ملف Excel</button>
+      <input type="file" id="jedFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+    </div>
+    <textarea id="rawDataJED" placeholder="رقم المورد&#9;اسم المورد&#9;المخزون&#9;المبيعات&#10;0201&#9;شركة باوارث للملابس الجاهزة - راقي&#9;1721002.00&#9;21158.00"></textarea>
+    <div class="msg" id="jedMsg"></div>
+
+    <button type="button" class="alias-toggle icon-toggle" id="pairToggleBtn" title="جدول تطابق الرموز بين الرياض وجدة — لتحديد أي الرموز تمثل نفس المورد">🔗</button>
+    <div id="pairPanel" style="display:none;">
+      <label>حدد أي رمز مورد في الرياض يقابل أي رمز مورد في جدة (نفس المورد الفعلي بأرقام مختلفة بين الفرعين). سيتم جمع مبيعات ومخزون كل زوج معًا في سطر واحد باسم بديل واحد وبدون رمز مورد. يتم حفظ هذا الجدول تلقائيًا في متصفحك، وله قيمة افتراضية جاهزة على مستوى الصفحة نفسها فتعمل على أي جهاز دون إعداد إضافي.</label>
+      <div class="alias-row alias-row-header">
+        <span>رمز الرياض</span>
+        <span>رمز جدة</span>
+        <span></span>
+      </div>
+      <div id="pairTable" class="alias-rows"></div>
+      <button type="button" class="secondary" id="addPairRowBtn">➕ إضافة تطابق</button>
+      <div class="actions" style="margin-top:12px;margin-bottom:0;">
+        <button type="button" class="secondary" id="savePairBtn">💾 حفظ / تحديث التطابق</button>
+        <button type="button" class="danger" id="clearPairBtn">🗑️ مسح التطابق المحفوظ</button>
+      </div>
+      <div class="msg" id="pairMsg"></div>
+    </div>
+  </div>
+
+  <div class="panel no-print">
+    <h2>الخطوة ٢ — بيانات التقرير</h2>
+    <div class="row">
+      <div>
+        <label>اسم الفرع</label>
+        <input type="text" id="branchName" value="الفروع">
+      </div>
+      <div>
+        <label>التاريخ</label>
+        <input type="date" id="reportDate">
+      </div>
+    </div>
+  </div>
+
+  <div class="panel no-print">
+    <h2>الخطوة ٣ — توليد التقرير</h2>
+    <div class="actions">
+      <button id="generateBtn">توليد التقرير</button>
+      <button class="secondary" id="printBtn" style="display:none;">حفظ / طباعة PDF</button>
+      <button class="secondary" id="pngBtn" style="display:none;">تصدير كصورة PNG</button>
+      <button class="secondary" id="copyBtn" style="display:none;">نسخ النص إلى الحافظة</button>
+    </div>
+    <div class="msg" id="genMsg"></div>
+  </div>
+
+  <div class="panel no-print" id="copyPanel" style="display:none;">
+    <h2>نص قابل للنسخ</h2>
+    <label>يمكنك نسخ هذا النص ولصقه في رسالة أو بريد إلكتروني.</label>
+    <textarea id="copyText" readonly></textarea>
+  </div>
+
+  <div id="report">
+    <div class="report-page">
+      <div class="report-title">
+        <img src="data:image/png;base64,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" alt="شعار الشركة" class="report-logo">
+        <h1 id="reportTitleAr">مبيعات الفروع</h1>
+      </div>
+
+      <table class="rt narrow" id="table1">
+        <caption>ملخص عام</caption>
+        <tbody></tbody>
+      </table>
+
+      <table class="rt" id="table2">
+        <caption>تفاصيل الموردين</caption>
+        <thead>
+          <tr>
+            <th>رمز المورد</th>
+            <th>اسم المورد</th>
+            <th class="num">رصيد المخزون</th>
+            <th class="num">مبيعات اليوم</th>
+            <th class="num">نسبة من إجمالي المبيعات</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="report-footer">
+        <span id="genDate"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// الوضع الداكن: يتبع تفضيل النظام تلقائيًا ما لم يختر المستخدم وضعًا صراحةً (يُحفظ في المتصفح)
+const THEME_KEY = 'uiTheme';
+
+function isDarkActive(){
+  const explicit = document.documentElement.getAttribute('data-theme');
+  if(explicit) return explicit === 'dark';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function applyTheme(theme){
+  if(theme === 'light' || theme === 'dark'){
+    document.documentElement.setAttribute('data-theme', theme);
+  }else{
+    document.documentElement.removeAttribute('data-theme');
+  }
+  const btn = document.getElementById('themeToggleBtn');
+  if(btn){
+    const dark = isDarkActive();
+    btn.textContent = dark ? '☀️' : '🌙';
+    btn.title = dark ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن';
+  }
+}
+
+let savedTheme = null;
+try{ savedTheme = localStorage.getItem(THEME_KEY); }catch(e){}
+applyTheme(savedTheme);
+
+document.getElementById('themeToggleBtn').addEventListener('click', ()=>{
+  const next = isDarkActive() ? 'light' : 'dark';
+  try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  applyTheme(next);
+});
+
+const ARABIC_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+
+function pad2(n){return String(n).padStart(2,'0');}
+
+function localISODate(offsetDays){
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+
+function formatDateArabic(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  return `${d} ${ARABIC_MONTHS[m-1]} ${y}`;
+}
+
+function numFmt(n){
+  return Math.round(n).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+
+function parseNumber(s){
+  if(s === null || s === undefined) return NaN;
+  return parseFloat(String(s).replace(/,/g,'').trim());
+}
+
+// يوحّد رموز الموردين بتجاهل الأصفار البادئة (مثلاً "0201" و"201" يُعاملان كنفس الرمز)
+function normalizeCode(code){
+  return String(code ?? '').trim().replace(/^0+(?=\d)/, '');
+}
+
+function splitRows(raw){
+  const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  let rows = lines.map(l => l.split('\t').map(c=>c.trim()));
+  if(rows.length && rows[0].length < 2){
+    rows = lines.map(l => l.split(/\s{2,}/).map(c=>c.trim()));
+  }
+  return rows;
+}
+
+function parseData(raw){
+  const rows = splitRows(raw);
+  if(rows.length < 2) throw new Error("لم يتم العثور على بيانات كافية. الصق سطر العناوين ثم صفوف بيانات الموردين.");
+
+  const header = rows[0].map(h=>h.toUpperCase());
+  let codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز'));
+  let nameIdx = header.findIndex(h=>h.includes('NAME') || h.includes('اسم'));
+  let invIdx = header.findIndex(h=>h.includes('INVENTORY') || h.includes('مخزون'));
+  let salesIdx = header.findIndex(h=>h.includes('SALES') || h.includes('مبيعات'));
+
+  if(codeIdx===-1 || nameIdx===-1 || invIdx===-1 || salesIdx===-1){
+    if(rows[0].length >= 4){
+      codeIdx = 0; nameIdx = 1; invIdx = 2; salesIdx = 3;
+    } else {
+      throw new Error("تعذّر التعرّف على أعمدة رمز المورد / اسم المورد / المخزون / المبيعات في سطر العناوين.");
+    }
+  }
+
+  const dataRows = rows.slice(1).filter(r=>r.length > Math.max(codeIdx,nameIdx,invIdx,salesIdx) && r[codeIdx]);
+
+  return dataRows.map(r=>{
+    const inventory = parseNumber(r[invIdx]);
+    const sales = parseNumber(r[salesIdx]);
+    return {
+      code: r[codeIdx],
+      name: r[nameIdx],
+      inventory: isNaN(inventory) ? 0 : inventory,
+      sales: isNaN(sales) ? 0 : sales
+    };
+  });
+}
+
+function parseAliasMap(raw){
+  const map = {};
+  const rows = splitRows(raw);
+  if(rows.length < 2) return map;
+
+  const header = rows[0].map(h=>h.toUpperCase());
+  let codeIdx = header.findIndex(h=>h.includes('CODE') || h.includes('كود') || h.includes('رمز'));
+  let aliasIdx = header.findIndex(h=>h.includes('ALIAS') || h.includes('بديل'));
+  if(codeIdx===-1 || aliasIdx===-1){
+    if(rows[0].length < 2) return map;
+    codeIdx = 0;
+    aliasIdx = rows[0].length - 1;
+  }
+
+  rows.slice(1).forEach(r=>{
+    const code = r[codeIdx];
+    const alias = r[aliasIdx];
+    if(code && alias) map[normalizeCode(code)] = alias;
+  });
+  return map;
+}
+
+function excelCellToText(cell){
+  if(cell instanceof Date) return cell.toISOString().slice(0,10);
+  if(typeof cell === 'number') return String(cell);
+  return String(cell ?? '').trim();
+}
+
+function wireExcelImport(buttonId, fileInputId, textareaId, msgId, itemLabel){
+  const btn = document.getElementById(buttonId);
+  const fileInput = document.getElementById(fileInputId);
+  const msg = document.getElementById(msgId);
+
+  btn.addEventListener('click', ()=> fileInput.click());
+
+  fileInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    if(typeof XLSX === 'undefined'){
+      msg.style.color = 'var(--danger)';
+      msg.textContent = 'تعذّر تحميل مكتبة قراءة ملفات Excel. تحقق من الاتصال بالإنترنت وحاول مجددًا.';
+      e.target.value = '';
+      return;
+    }
+    msg.style.color = 'var(--muted)';
+    msg.textContent = 'جارٍ قراءة الملف...';
+
+    const reader = new FileReader();
+    reader.onload = (evt)=>{
+      try{
+        const data = new Uint8Array(evt.target.result);
+        const wb = XLSX.read(data, {type:'array'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:true, defval:''});
+        const nonEmptyRows = rows.filter(r => Array.isArray(r) && r.some(c => c !== '' && c !== null && c !== undefined));
+
+        const tsvLines = nonEmptyRows.map(r => r.map(c => excelCellToText(c)).join('\t'));
+        if(tsvLines.length === 0) throw new Error('الملف لا يحتوي على بيانات.');
+
+        document.getElementById(textareaId).value = tsvLines.join('\n');
+        msg.style.color = 'var(--muted)';
+        msg.textContent = `تم استيراد ${Math.max(tsvLines.length - 1, 0)} ${itemLabel} من الملف "${file.name}".`;
+      }catch(err){
+        msg.style.color = 'var(--danger)';
+        msg.textContent = 'خطأ في قراءة ملف Excel: ' + err.message;
+      }finally{
+        e.target.value = '';
+      }
+    };
+    reader.onerror = ()=>{
+      msg.style.color = 'var(--danger)';
+      msg.textContent = 'تعذّرت قراءة الملف.';
+      e.target.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+wireExcelImport('importRuhBtn', 'ruhFileInput', 'rawDataRUH', 'ruhMsg', 'صف بيانات (الرياض)');
+wireExcelImport('importJedBtn', 'jedFileInput', 'rawDataJED', 'jedMsg', 'صف بيانات (جدة)');
+
+// قراءة الأسماء البديلة المحفوظة أصلًا من الصفحة الرئيسية (نفس المتصفح/المتصفح فقط) — هذه الصفحة لا تُعدّلها
+const ALIAS_STORAGE_KEY = 'supplierAliasMapping';
+function loadAliasStorage(){
+  try{ return localStorage.getItem(ALIAS_STORAGE_KEY) || ''; }catch(e){ return ''; }
+}
+
+// جدول تطابق الرموز بين الرياض وجدة (نفس المورد الفعلي برقمين مختلفين)
+const PAIR_STORAGE_KEY = 'branchCodePairs';
+// قيمة افتراضية على مستوى الصفحة نفسها (وليست تخزينًا محليًا بجهاز بعينه) فتعمل على أي جهاز/متصفح دون إعداد إضافي
+const DEFAULT_PAIRS = [
+  {ruh:'0180', jed:'0252'}, {ruh:'0183', jed:'0284'}, {ruh:'0182', jed:'0271'},
+  {ruh:'0160', jed:'0202'}, {ruh:'0137', jed:'0240'}, {ruh:'0181', jed:'0203'},
+  {ruh:'0158', jed:'0246'}, {ruh:'0145', jed:'0253'}, {ruh:'0117', jed:'0251'},
+  {ruh:'0115', jed:'0201'}, {ruh:'0198', jed:'0434'}, {ruh:'0317', jed:'0459'},
+  {ruh:'0310', jed:'0430'}, {ruh:'0103', jed:'0218'}, {ruh:'0306', jed:'0416'},
+  {ruh:'0309', jed:'0444'}, {ruh:'0302', jed:'0436'}, {ruh:'0104', jed:'0221'},
+  {ruh:'0318', jed:'0230'}, {ruh:'0106', jed:'0247'}, {ruh:'0165', jed:'0428'},
+  {ruh:'0319', jed:'0447'}, {ruh:'0161', jed:'0401'}, {ruh:'0178', jed:'0293'},
+  {ruh:'0184', jed:'0297'}, {ruh:'0179', jed:'0407'}, {ruh:'0159', jed:'0402'},
+  {ruh:'0108', jed:'0299'}
+];
+
+function savePairStorage(){
+  try{
+    localStorage.setItem(PAIR_STORAGE_KEY, JSON.stringify(pairRows));
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function loadPairStorage(){
+  try{
+    const raw = localStorage.getItem(PAIR_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+let pairRows = loadPairStorage();
+if(pairRows.length === 0){
+  pairRows = DEFAULT_PAIRS.map(p => ({...p}));
+}
+
+function renderPairTable(){
+  const container = document.getElementById('pairTable');
+  container.innerHTML = '';
+  pairRows.forEach((pair, i)=>{
+    const rowEl = document.createElement('div');
+    rowEl.className = 'alias-row';
+
+    const ruhInput = document.createElement('input');
+    ruhInput.type = 'text';
+    ruhInput.className = 'code';
+    ruhInput.value = pair.ruh;
+    ruhInput.placeholder = 'مثال: 0115';
+    ruhInput.addEventListener('input', ()=>{ pairRows[i].ruh = ruhInput.value; savePairStorage(); });
+
+    const jedInput = document.createElement('input');
+    jedInput.type = 'text';
+    jedInput.placeholder = 'مثال: 0201';
+    jedInput.value = pair.jed;
+    jedInput.addEventListener('input', ()=>{ pairRows[i].jed = jedInput.value; savePairStorage(); });
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'alias-row-delete';
+    delBtn.title = 'حذف';
+    delBtn.textContent = '🗑️';
+    delBtn.addEventListener('click', ()=>{
+      pairRows.splice(i, 1);
+      if(pairRows.length === 0) pairRows.push({ruh:'', jed:''});
+      savePairStorage();
+      renderPairTable();
+    });
+
+    rowEl.appendChild(ruhInput);
+    rowEl.appendChild(jedInput);
+    rowEl.appendChild(delBtn);
+    container.appendChild(rowEl);
+  });
+}
+
+renderPairTable();
+
+document.getElementById('pairToggleBtn').addEventListener('click', ()=>{
+  const panel = document.getElementById('pairPanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('addPairRowBtn').addEventListener('click', ()=>{
+  pairRows.push({ruh:'', jed:''});
+  savePairStorage();
+  renderPairTable();
+  const inputs = document.querySelectorAll('#pairTable .alias-row:last-child input');
+  if(inputs[0]) inputs[0].focus();
+});
+
+document.getElementById('savePairBtn').addEventListener('click', ()=>{
+  const pairMsg = document.getElementById('pairMsg');
+  const ok = savePairStorage();
+  const count = pairRows.filter(p => p.ruh.trim() && p.jed.trim()).length;
+  if(ok){
+    pairMsg.style.color = 'var(--muted)';
+    pairMsg.textContent = `تم حفظ ${count} تطابقًا في متصفحك بنجاح.`;
+  }else{
+    pairMsg.style.color = 'var(--danger)';
+    pairMsg.textContent = 'تعذّر الحفظ في متصفحك (قد يكون التصفح الخاص أو تخزين المتصفح معطّلاً). سيعمل التطابق في هذه الجلسة فقط.';
+  }
+});
+
+document.getElementById('clearPairBtn').addEventListener('click', ()=>{
+  pairRows = [{ruh:'', jed:''}];
+  savePairStorage();
+  renderPairTable();
+  const pairMsg = document.getElementById('pairMsg');
+  pairMsg.style.color = 'var(--muted)';
+  pairMsg.textContent = 'تم مسح جدول التطابق المحفوظ.';
+});
+
+// يدمج بيانات الرياض وجدة: كل زوج متطابق يصبح سطرًا واحدًا (مجموع المبيعات والمخزون، بدون رمز مورد)،
+// وأي مورد بلا مقابل يبقى سطرًا مستقلاً بكوده الأصلي
+function combineBranches(ruhRows, jedRows, pairs, aliasMap){
+  const ruhUsed = new Set();
+  const jedUsed = new Set();
+  const combined = [];
+
+  pairs.forEach(pair=>{
+    const ruhCode = normalizeCode(pair.ruh);
+    const jedCode = normalizeCode(pair.jed);
+    if(!ruhCode && !jedCode) return;
+
+    const ruhRow = ruhRows.find(r => normalizeCode(r.code) === ruhCode);
+    const jedRow = jedRows.find(r => normalizeCode(r.code) === jedCode);
+    if(!ruhRow && !jedRow) return;
+
+    if(ruhRow) ruhUsed.add(ruhRow);
+    if(jedRow) jedUsed.add(jedRow);
+
+    const name = aliasMap[ruhCode] || aliasMap[jedCode] || (ruhRow && ruhRow.name) || (jedRow && jedRow.name) || '';
+    combined.push({
+      code: '',
+      name,
+      displayName: name,
+      inventory: (ruhRow ? ruhRow.inventory : 0) + (jedRow ? jedRow.inventory : 0),
+      sales: (ruhRow ? ruhRow.sales : 0) + (jedRow ? jedRow.sales : 0)
+    });
+  });
+
+  const unmatchedRuh = ruhRows.filter(r => !ruhUsed.has(r))
+    .map(r => ({...r, displayName: aliasMap[normalizeCode(r.code)] || r.name}));
+  const unmatchedJed = jedRows.filter(r => !jedUsed.has(r))
+    .map(r => ({...r, displayName: aliasMap[normalizeCode(r.code)] || r.name}));
+
+  return combined.concat(unmatchedRuh, unmatchedJed);
+}
+
+const reportDateInput = document.getElementById('reportDate');
+reportDateInput.value = localISODate(-1);
+['click','focus'].forEach(evt=>{
+  reportDateInput.addEventListener(evt, ()=>{
+    if(reportDateInput.showPicker){
+      try{ reportDateInput.showPicker(); }catch(e){}
+    }
+  });
+});
+
+function buildCopyText(branch, dateAr, rows){
+  const lines = [];
+  if(branch){
+    lines.push(`*مبيعات ${branch}*`);
+    lines.push(`*يوم ${dateAr}*`);
+  }else{
+    lines.push(`*مبيعات يوم ${dateAr}*`);
+  }
+  lines.push(`*عدد الموردين ${rows.length}*`);
+  lines.push('_________________________');
+  rows.forEach((r, i)=>{
+    const codePart = r.code ? ` (${r.code})` : '';
+    lines.push(`${i+1}. ${r.displayName}${codePart} — ${numFmt(r.sales)}`);
+  });
+  return lines.join('\n');
+}
+
+let currentFileName = 'تقرير-مبيعات-الفروع';
+
+document.getElementById('generateBtn').addEventListener('click', ()=>{
+  const genMsg = document.getElementById('genMsg');
+  genMsg.textContent = '';
+  genMsg.style.color = 'var(--muted)';
+  try{
+    const branch = document.getElementById('branchName').value.trim();
+    const dateVal = document.getElementById('reportDate').value;
+    if(!dateVal) throw new Error('الرجاء إدخال التاريخ.');
+
+    const aliasMap = parseAliasMap(loadAliasStorage());
+    const ruhRows = parseData(document.getElementById('rawDataRUH').value);
+    const jedRows = parseData(document.getElementById('rawDataJED').value);
+    if(ruhRows.length === 0 && jedRows.length === 0){
+      throw new Error('الرجاء لصق بيانات الرياض أو جدة على الأقل.');
+    }
+
+    const rows = combineBranches(ruhRows, jedRows, pairRows, aliasMap)
+      .sort((a,b)=> b.sales - a.sales);
+
+    const totalSales = rows.reduce((a,r)=>a+r.sales,0);
+    const best = rows[0];
+    const dateAr = formatDateArabic(dateVal);
+
+    const t1 = document.querySelector('#table1 tbody');
+    t1.innerHTML = `
+      <tr><td>عدد الموردين</td><td class="num">${rows.length}</td></tr>
+      <tr><td>إجمالي مبيعات اليوم</td><td class="num">${numFmt(totalSales)}</td></tr>
+      <tr class="best"><td>أفضل مورد مبيعًا (${best.displayName})</td><td class="num">${numFmt(best.sales)}</td></tr>
+    `;
+
+    const t2 = document.querySelector('#table2 tbody');
+    t2.innerHTML = '';
+    rows.forEach(r=>{
+      const pct = totalSales ? (r.sales/totalSales*100) : 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.code}</td><td class="name">${r.displayName}</td><td class="num">${numFmt(r.inventory)}</td><td class="num">${numFmt(r.sales)}</td><td class="num">${pct.toFixed(1)}%</td>`;
+      t2.appendChild(tr);
+    });
+
+    document.getElementById('reportTitleAr').textContent = branch ? `مبيعات ${branch} ليوم ${dateAr}` : `مبيعات ليوم ${dateAr}`;
+    document.getElementById('genDate').textContent = 'تاريخ التوليد: ' + new Date().toLocaleDateString('ar-SA');
+
+    currentFileName = branch ? `مبيعات فرع ${branch} ليوم ${dateAr}` : `مبيعات ليوم ${dateAr}`;
+
+    document.getElementById('copyText').value = buildCopyText(branch, dateAr, rows);
+
+    document.getElementById('report').style.display = 'block';
+    document.getElementById('printBtn').style.display = 'inline-block';
+    document.getElementById('pngBtn').style.display = 'inline-block';
+    document.getElementById('copyBtn').style.display = 'inline-block';
+    document.getElementById('copyPanel').style.display = 'block';
+    genMsg.textContent = `تم توليد التقرير بنجاح (${rows.length} موردًا).`;
+  }catch(err){
+    genMsg.style.color = 'var(--danger)';
+    genMsg.textContent = 'خطأ: ' + err.message;
+  }
+});
+
+document.getElementById('printBtn').addEventListener('click', async ()=>{
+  const prevTitle = document.title;
+  document.title = currentFileName;
+  try{
+    if(document.fonts && document.fonts.ready) await document.fonts.ready;
+    window.print();
+  }finally{
+    document.title = prevTitle;
+  }
+});
+
+function grayscaleCanvas(canvas){
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = imgData.data;
+  for(let i=0;i<d.length;i+=4){
+    let gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    if(gray > 240) gray = 255;
+    else if(gray < 60) gray = 0;
+    d[i] = d[i+1] = d[i+2] = gray;
+  }
+  ctx.putImageData(imgData, 0, 0);
+  return canvas;
+}
+
+document.getElementById('pngBtn').addEventListener('click', async ()=>{
+  const genMsg = document.getElementById('genMsg');
+  const pngBtn = document.getElementById('pngBtn');
+  genMsg.style.color = 'var(--muted)';
+  genMsg.textContent = 'جارٍ إنشاء صورة PNG...';
+  pngBtn.disabled = true;
+  const logo = document.querySelector('.report-logo');
+  const prevLogoDisplay = logo.style.display;
+  try{
+    logo.style.display = 'none';
+    const target = document.querySelector('.report-page');
+    const scale = Math.min(2, window.devicePixelRatio || 1.5);
+    const canvas = grayscaleCanvas(await html2canvas(target, {scale, backgroundColor:'#ffffff'}));
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if(!blob) throw new Error('تعذّر إنشاء الصورة.');
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentFileName.replace(/\s+/g,'-')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    genMsg.style.color = 'var(--muted)';
+    genMsg.textContent = `تم تنزيل الصورة (${(blob.size/1024).toFixed(0)} كيلوبايت).`;
+  }catch(err){
+    genMsg.style.color = 'var(--danger)';
+    genMsg.textContent = 'خطأ أثناء إنشاء الصورة: ' + err.message;
+  }finally{
+    logo.style.display = prevLogoDisplay;
+    pngBtn.disabled = false;
+  }
+});
+
+document.getElementById('copyBtn').addEventListener('click', async ()=>{
+  const genMsg = document.getElementById('genMsg');
+  const text = document.getElementById('copyText').value;
+  try{
+    await navigator.clipboard.writeText(text);
+    genMsg.style.color = 'var(--muted)';
+    genMsg.textContent = 'تم نسخ النص إلى الحافظة.';
+  }catch(err){
+    const ta = document.getElementById('copyText');
+    ta.focus();
+    ta.select();
+    document.execCommand('copy');
+    genMsg.style.color = 'var(--muted)';
+    genMsg.textContent = 'تم تحديد النص، استخدم Ctrl+C للنسخ.';
+  }
+});
+</script>
+</body>
+</html>
