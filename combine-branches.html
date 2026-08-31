@@ -699,7 +699,7 @@ document.getElementById('applyUpdateBtn').addEventListener('click', ()=>{
     }
   });
   try{ localStorage.setItem(MERGE_STORAGE_KEY, JSON.stringify(stored)); }catch(e){}
-  document.getElementById('updateBanner').hidden = true;
+  location.reload();
 });
 
 document.getElementById('dismissUpdateBtn').addEventListener('click', ()=>{
