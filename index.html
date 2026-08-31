@@ -186,6 +186,10 @@
   .alias-row-header span:last-child{flex:0 0 40px;}
   #addAliasRowBtn{margin-bottom:14px;}
 
+  .alias-row input.codes{flex:0 0 160px;}
+  #mergeTableHeader span:first-child{flex:0 0 160px;}
+  #addMergeRowBtn{margin-bottom:4px;}
+
   #copyText{
     width:100%;
     min-height:220px;
@@ -360,6 +364,23 @@
       </div>
 
       <div class="msg" id="aliasMsg"></div>
+    </div>
+
+    <button type="button" class="alias-toggle" id="mergeToggleBtn">🔗 دمج عدة موردين تحت اسم واحد — اختياري</button>
+    <div id="mergePanel" style="display:none;">
+      <label>اجمع أكثر من رمز مورد تحت اسم موحّد واحد (مثال: دمج 0666 و0999 تحت اسم "اتش ار ام")، فيتم جمع مبيعاتهم ومخزونهم معًا، وتظهر النتيجة الموحّدة بدون رمز مورد لأنها تمثل أكثر من مورد. يتم حفظ الجدول تلقائيًا في متصفحك.</label>
+      <div class="alias-row alias-row-header" id="mergeTableHeader">
+        <span>الرموز المدموجة (افصل بينها بفاصلة)</span>
+        <span>الاسم الموحّد</span>
+        <span></span>
+      </div>
+      <div id="mergeTable" class="alias-rows"></div>
+      <button type="button" class="secondary" id="addMergeRowBtn">➕ إضافة دمج</button>
+      <div class="actions" style="margin-top:12px;margin-bottom:0;">
+        <button type="button" id="saveMergeBtn">💾 حفظ / تحديث الدمج</button>
+        <button type="button" class="danger" id="clearMergeBtn">🗑️ مسح الدمج المحفوظ</button>
+      </div>
+      <div class="msg" id="mergeMsg"></div>
     </div>
   </div>
 
@@ -796,6 +817,145 @@ document.getElementById('downloadAliasBtn').addEventListener('click', ()=>{
   aliasMsg.textContent = 'تم تنزيل ملف الأسماء البديلة.';
 });
 
+// دمج عدة موردين تحت اسم موحّد واحد (تُحفظ محليًا في متصفح المستخدم فقط، كالأسماء البديلة)
+const MERGE_STORAGE_KEY = 'supplierMergeGroups';
+const MERGE_SEEDED_KEY = 'supplierMergeGroupsSeeded';
+
+function saveMergeStorage(){
+  try{
+    localStorage.setItem(MERGE_STORAGE_KEY, JSON.stringify(mergeGroups));
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function loadMergeStorage(){
+  try{
+    const raw = localStorage.getItem(MERGE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+let mergeGroups = loadMergeStorage();
+let mergeHasSavedData = mergeGroups.some(g => (g.codesText||'').trim() || (g.name||'').trim());
+let mergeAlreadySeeded = false;
+try{ mergeAlreadySeeded = localStorage.getItem(MERGE_SEEDED_KEY) === '1'; }catch(e){}
+if(!mergeAlreadySeeded && mergeGroups.length === 0){
+  // دمج افتراضي: 0666 و0999 تحت اسم "اتش ار ام" — يمكن تعديله أو حذفه من الجدول أدناه
+  mergeGroups = [{codesText:'666, 999', name:'اتش ار ام'}];
+  mergeHasSavedData = true;
+}
+try{ localStorage.setItem(MERGE_SEEDED_KEY, '1'); }catch(e){}
+if(mergeGroups.length === 0) mergeGroups = [{codesText:'', name:''}];
+
+function renderMergeTable(){
+  const container = document.getElementById('mergeTable');
+  container.innerHTML = '';
+  mergeGroups.forEach((group, i)=>{
+    const rowEl = document.createElement('div');
+    rowEl.className = 'alias-row';
+
+    const codesInput = document.createElement('input');
+    codesInput.type = 'text';
+    codesInput.className = 'codes';
+    codesInput.value = group.codesText;
+    codesInput.placeholder = 'مثال: 0666, 0999';
+    codesInput.addEventListener('input', ()=>{ mergeGroups[i].codesText = codesInput.value; saveMergeStorage(); });
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.placeholder = 'الاسم الموحّد';
+    nameInput.value = group.name;
+    nameInput.addEventListener('input', ()=>{ mergeGroups[i].name = nameInput.value; saveMergeStorage(); });
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'alias-row-delete';
+    delBtn.title = 'حذف';
+    delBtn.textContent = '🗑️';
+    delBtn.addEventListener('click', ()=>{
+      mergeGroups.splice(i, 1);
+      if(mergeGroups.length === 0) mergeGroups.push({codesText:'', name:''});
+      saveMergeStorage();
+      renderMergeTable();
+    });
+
+    rowEl.appendChild(codesInput);
+    rowEl.appendChild(nameInput);
+    rowEl.appendChild(delBtn);
+    container.appendChild(rowEl);
+  });
+}
+
+renderMergeTable();
+if(mergeHasSavedData){
+  document.getElementById('mergePanel').style.display = 'block';
+}
+
+document.getElementById('mergeToggleBtn').addEventListener('click', ()=>{
+  const panel = document.getElementById('mergePanel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
+
+document.getElementById('addMergeRowBtn').addEventListener('click', ()=>{
+  mergeGroups.push({codesText:'', name:''});
+  saveMergeStorage();
+  renderMergeTable();
+  const inputs = document.querySelectorAll('#mergeTable .alias-row:last-child input');
+  if(inputs[0]) inputs[0].focus();
+});
+
+document.getElementById('saveMergeBtn').addEventListener('click', ()=>{
+  const mergeMsg = document.getElementById('mergeMsg');
+  const ok = saveMergeStorage();
+  const count = mergeGroups.filter(g => g.codesText.trim() && g.name.trim()).length;
+  if(ok){
+    mergeMsg.style.color = 'var(--muted)';
+    mergeMsg.textContent = `تم حفظ ${count} مجموعة دمج في متصفحك بنجاح.`;
+  }else{
+    mergeMsg.style.color = 'var(--danger)';
+    mergeMsg.textContent = 'تعذّر الحفظ في متصفحك (قد يكون التصفح الخاص أو تخزين المتصفح معطّلاً). سيعمل الدمج في هذه الجلسة فقط.';
+  }
+});
+
+document.getElementById('clearMergeBtn').addEventListener('click', ()=>{
+  mergeGroups = [{codesText:'', name:''}];
+  saveMergeStorage();
+  renderMergeTable();
+  const mergeMsg = document.getElementById('mergeMsg');
+  mergeMsg.style.color = 'var(--muted)';
+  mergeMsg.textContent = 'تم مسح مجموعات الدمج المحفوظة.';
+});
+
+function parseMergeCodes(codesText){
+  return (codesText || '').split(/[,،\s]+/).map(c=>c.trim()).filter(Boolean).map(normalizeCode);
+}
+
+function applyMergeGroups(rows, groups){
+  let result = rows.slice();
+  groups.forEach(group=>{
+    const codes = parseMergeCodes(group.codesText);
+    const name = (group.name || '').trim();
+    if(codes.length === 0 || !name) return;
+    const codeSet = new Set(codes);
+    const matched = result.filter(r => codeSet.has(normalizeCode(r.code)));
+    if(matched.length === 0) return;
+    const remaining = result.filter(r => !codeSet.has(normalizeCode(r.code)));
+    const mergedRow = {
+      code: '',
+      name: name,
+      displayName: name,
+      inventory: matched.reduce((a,r)=>a+r.inventory, 0),
+      sales: matched.reduce((a,r)=>a+r.sales, 0)
+    };
+    result = remaining.concat([mergedRow]);
+  });
+  return result;
+}
+
 const branchSelect = document.getElementById('branchSelect');
 const branchCustom = document.getElementById('branchCustom');
 branchSelect.addEventListener('change', ()=>{
@@ -828,7 +988,8 @@ function buildCopyText(branch, dateAr, rows){
   lines.push(`*عدد الموردين ${rows.length}*`);
   lines.push('_________________________');
   rows.forEach((r, i)=>{
-    lines.push(`${i+1}. ${r.displayName} (${r.code}) — ${numFmt(r.sales)}`);
+    const codePart = r.code ? ` (${r.code})` : '';
+    lines.push(`${i+1}. ${r.displayName}${codePart} — ${numFmt(r.sales)}`);
   });
   return lines.join('\n');
 }
@@ -846,8 +1007,9 @@ document.getElementById('generateBtn').addEventListener('click', ()=>{
 
     const raw = document.getElementById('rawData').value;
     const aliasMap = parseAliasMap(document.getElementById('aliasData').value);
-    const rows = parseData(raw)
-      .map(r => ({...r, displayName: aliasMap[normalizeCode(r.code)] || r.name}))
+    const aliasedRows = parseData(raw)
+      .map(r => ({...r, displayName: aliasMap[normalizeCode(r.code)] || r.name}));
+    const rows = applyMergeGroups(aliasedRows, mergeGroups)
       .sort((a,b)=> b.sales - a.sales);
 
     const totalSales = rows.reduce((a,r)=>a+r.sales,0);
