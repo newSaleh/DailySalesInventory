@@ -10,41 +10,38 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
-    --ink:#182333;
-    --paper:#eef2f7;
-    --line:#c4cedb;
+    --ink:#1c1f26;
+    --paper:#f3f3f1;
+    --line:#d8d8d4;
     --accent:#2f5fa8;
-    --accent-dark:#1d3f75;
     --danger:#9c3b3b;
-    --muted:#5b6472;
+    --muted:#6b6f78;
     --card:#ffffff;
-    --field-bg:#f7f9fc;
+    --field-bg:#f7f7f5;
     color-scheme:light;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --ink:#e7ecf5;
-      --paper:#10141d;
-      --line:#2d3648;
-      --accent:#5b8fdc;
-      --accent-dark:#7fa8e8;
+      --ink:#e8e8e6;
+      --paper:#15161a;
+      --line:#2e3138;
+      --accent:#6fa0e6;
       --danger:#e28080;
-      --muted:#98a3b8;
-      --card:#1a2030;
-      --field-bg:#141a26;
+      --muted:#95989f;
+      --card:#1e2027;
+      --field-bg:#191b20;
       color-scheme:dark;
     }
   }
   :root[data-theme="dark"]{
-    --ink:#e7ecf5;
-    --paper:#10141d;
-    --line:#2d3648;
-    --accent:#5b8fdc;
-    --accent-dark:#7fa8e8;
+    --ink:#e8e8e6;
+    --paper:#15161a;
+    --line:#2e3138;
+    --accent:#6fa0e6;
     --danger:#e28080;
-    --muted:#98a3b8;
-    --card:#1a2030;
-    --field-bg:#141a26;
+    --muted:#95989f;
+    --card:#1e2027;
+    --field-bg:#191b20;
     color-scheme:dark;
   }
   *{box-sizing:border-box;}
@@ -92,7 +89,7 @@
   .panel h2{
     font-size:14px;
     margin:0 0 12px;
-    color:var(--accent-dark);
+    color:var(--ink);
     font-weight:700;
   }
   label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
@@ -127,26 +124,31 @@
     font-size:13.5px;
     padding:10px 18px;
     border-radius:6px;
-    border:1px solid var(--accent-dark);
+    border:1px solid var(--accent);
     cursor:pointer;
     background:var(--accent);
     color:#fff;
   }
-  button.secondary{background:var(--card);color:var(--accent-dark);}
-  button.danger{background:var(--card);color:var(--danger);border-color:var(--danger);}
+  button.secondary{background:var(--card);color:var(--ink);border-color:var(--line);}
+  button.danger{background:var(--card);color:var(--muted);border-color:var(--line);}
   button:hover{opacity:.9;}
   .msg{font-size:12.5px;color:var(--muted);margin-top:10px;min-height:16px;}
 
   .alias-toggle{
     background:none;
     border:none;
-    color:var(--accent-dark);
+    color:var(--accent);
     font-family:'Tajawal',sans-serif;
     font-weight:700;
     font-size:12.5px;
     cursor:pointer;
     padding:6px 0;
     text-decoration:underline;
+  }
+  .icon-toggle{
+    font-size:19px;
+    padding:4px 10px;
+    text-decoration:none;
   }
   #aliasPanel{
     margin-top:12px;
@@ -173,8 +175,8 @@
     padding:8px 0;
     text-align:center;
     background:var(--card);
-    color:var(--danger);
-    border-color:var(--danger);
+    color:var(--muted);
+    border-color:var(--line);
   }
   .alias-row-header{
     font-size:11.5px;
@@ -336,14 +338,14 @@
     <textarea id="rawData" placeholder="SupplierCode&#9;SupplierName&#9;SupplierInventory&#9;SupplierSales&#10;0201&#9;شركة باوارث للملابس الجاهزة - راقي&#9;1724109.00&#9;33165.00"></textarea>
     <div class="msg" id="parseMsg"></div>
 
-    <button type="button" class="alias-toggle" id="aliasToggleBtn">🏷️ استخدام أسماء بديلة (مختصرة) للموردين — اختياري</button>
+    <button type="button" class="alias-toggle icon-toggle" id="aliasToggleBtn" title="استخدام أسماء بديلة (مختصرة) للموردين — اختياري">🏷️</button>
     <div id="aliasPanel" style="display:none;">
       <label>أضف رمز المورد واسمه البديل صفًا بصف أدناه (سهل الاستخدام من الجوال أيضًا)، أو استورد ملف Excel لإضافة عدد كبير دفعة واحدة. عند التوليد سيتم استبدال اسم المورد تلقائيًا بالاسم البديل إن وُجد لرمزه. يتم حفظ الجدول تلقائيًا في متصفحك.</label>
       <div class="actions" style="margin-top:0;margin-bottom:12px;">
         <button type="button" class="secondary" id="importAliasExcelBtn">📄 استيراد من ملف Excel</button>
         <input type="file" id="aliasExcelFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
         <button type="button" class="secondary" id="downloadAliasBtn">⬇️ تنزيل الأسماء كملف Excel</button>
-        <button type="button" id="saveAliasBtn">💾 حفظ / تحديث الأسماء</button>
+        <button type="button" class="secondary" id="saveAliasBtn">💾 حفظ / تحديث الأسماء</button>
         <button type="button" class="danger" id="clearAliasBtn">🗑️ مسح الأسماء المحفوظة</button>
       </div>
 
@@ -366,7 +368,7 @@
       <div class="msg" id="aliasMsg"></div>
     </div>
 
-    <button type="button" class="alias-toggle" id="mergeToggleBtn">🔗 دمج عدة موردين تحت اسم واحد — اختياري</button>
+    <button type="button" class="alias-toggle icon-toggle" id="mergeToggleBtn" title="دمج عدة موردين تحت اسم واحد — اختياري">🔗</button>
     <div id="mergePanel" style="display:none;">
       <label>اجمع أكثر من رمز مورد تحت اسم موحّد واحد (مثال: دمج 0666 و0999 تحت اسم "اتش ار ام")، فيتم جمع مبيعاتهم ومخزونهم معًا، وتظهر النتيجة الموحّدة بدون رمز مورد لأنها تمثل أكثر من مورد. يتم حفظ الجدول تلقائيًا في متصفحك.</label>
       <div class="alias-row alias-row-header" id="mergeTableHeader">
@@ -377,7 +379,7 @@
       <div id="mergeTable" class="alias-rows"></div>
       <button type="button" class="secondary" id="addMergeRowBtn">➕ إضافة دمج</button>
       <div class="actions" style="margin-top:12px;margin-bottom:0;">
-        <button type="button" id="saveMergeBtn">💾 حفظ / تحديث الدمج</button>
+        <button type="button" class="secondary" id="saveMergeBtn">💾 حفظ / تحديث الدمج</button>
         <button type="button" class="danger" id="clearMergeBtn">🗑️ مسح الدمج المحفوظ</button>
       </div>
       <div class="msg" id="mergeMsg"></div>
@@ -748,9 +750,6 @@ function refreshAliasRowsFromTextarea(){
 
 renderAliasTable();
 aliasDataEl.value = aliasRowsToTSV(aliasRows); // مزامنة عرض النص فقط، بلا كتابة إلى التخزين
-if(savedAliasRaw){
-  document.getElementById('aliasPanel').style.display = 'block';
-}
 aliasDataEl.addEventListener('input', saveAliasStorage);
 
 document.getElementById('addAliasRowBtn').addEventListener('click', ()=>{
@@ -819,7 +818,9 @@ document.getElementById('downloadAliasBtn').addEventListener('click', ()=>{
 
 // دمج عدة موردين تحت اسم موحّد واحد (تُحفظ محليًا في متصفح المستخدم فقط، كالأسماء البديلة)
 const MERGE_STORAGE_KEY = 'supplierMergeGroups';
-const MERGE_SEEDED_KEY = 'supplierMergeGroupsSeeded';
+// دمج افتراضي على مستوى الصفحة نفسها (وليس تخزينًا محليًا بجهاز بعينه) فيظهر على أي جهاز/متصفح
+// دون أي إعداد إضافي؛ قابل للتعديل أو الحذف من الجدول أدناه على كل جهاز على حدة
+const DEFAULT_MERGE_GROUPS = [{codesText:'666, 999', name:'اتش ار ام'}];
 
 function saveMergeStorage(){
   try{
@@ -840,16 +841,9 @@ function loadMergeStorage(){
 }
 
 let mergeGroups = loadMergeStorage();
-let mergeHasSavedData = mergeGroups.some(g => (g.codesText||'').trim() || (g.name||'').trim());
-let mergeAlreadySeeded = false;
-try{ mergeAlreadySeeded = localStorage.getItem(MERGE_SEEDED_KEY) === '1'; }catch(e){}
-if(!mergeAlreadySeeded && mergeGroups.length === 0){
-  // دمج افتراضي: 0666 و0999 تحت اسم "اتش ار ام" — يمكن تعديله أو حذفه من الجدول أدناه
-  mergeGroups = [{codesText:'666, 999', name:'اتش ار ام'}];
-  mergeHasSavedData = true;
+if(mergeGroups.length === 0){
+  mergeGroups = DEFAULT_MERGE_GROUPS.map(g => ({...g}));
 }
-try{ localStorage.setItem(MERGE_SEEDED_KEY, '1'); }catch(e){}
-if(mergeGroups.length === 0) mergeGroups = [{codesText:'', name:''}];
 
 function renderMergeTable(){
   const container = document.getElementById('mergeTable');
@@ -891,9 +885,6 @@ function renderMergeTable(){
 }
 
 renderMergeTable();
-if(mergeHasSavedData){
-  document.getElementById('mergePanel').style.display = 'block';
-}
 
 document.getElementById('mergeToggleBtn').addEventListener('click', ()=>{
   const panel = document.getElementById('mergePanel');
