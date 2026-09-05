@@ -1054,10 +1054,10 @@ reportDateInput.value = localISODate(-1);
 function buildCopyText(branch, dateAr, rows){
   const lines = [];
   if(branch){
-    lines.push(`*مبيعات ${branch}*`);
+    lines.push(`*يومية ${branch}*`);
     lines.push(`*يوم ${dateAr}*`);
   }else{
-    lines.push(`*مبيعات يوم ${dateAr}*`);
+    lines.push(`*يومية يوم ${dateAr}*`);
   }
   lines.push(`*عدد الموردين ${rows.length}*`);
   lines.push('_________________________');
